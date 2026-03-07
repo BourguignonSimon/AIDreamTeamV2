@@ -1,0 +1,236 @@
+{
+  "app": {
+    "name": "Operia",
+    "tagline": "Plateforme de conseil augmentée par IA"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "projects": "Projets",
+    "settings": "Paramètres",
+    "logout": "Se déconnecter"
+  },
+  "auth": {
+    "sign_in": "Se connecter",
+    "sign_up": "S'inscrire",
+    "sign_in_google": "Continuer avec Google",
+    "email": "Adresse e-mail",
+    "password": "Mot de passe",
+    "forgot_password": "Mot de passe oublié ?",
+    "reset_password": "Réinitialiser le mot de passe",
+    "reset_sent": "E-mail de réinitialisation envoyé. Vérifiez votre boîte de réception.",
+    "no_account": "Pas encore de compte ?",
+    "have_account": "Déjà un compte ?"
+  },
+  "dashboard": {
+    "title": "Vos Projets",
+    "subtitle": "Toutes les missions de conseil accessibles",
+    "new_project": "Nouveau Projet",
+    "no_projects": "Aucun projet",
+    "no_projects_desc": "Créez votre premier projet de conseil pour commencer.",
+    "active": "Actif",
+    "archived": "Archivé",
+    "completed": "Terminé"
+  },
+  "project": {
+    "create": "Créer un Projet",
+    "create_desc": "Configurer une nouvelle mission de conseil",
+    "name": "Nom du projet",
+    "client_name": "Nom du client",
+    "industry": "Secteur d'activité",
+    "country": "Pays",
+    "language": "Langue de sortie",
+    "context_summary": "Résumé contextuel",
+    "context_summary_hint": "Décrivez brièvement le contexte de la PME, les défis clés ou la portée de la mission (max 500 mots)",
+    "archive": "Archiver le projet",
+    "duplicate": "Dupliquer le modèle",
+    "settings": "Paramètres du projet"
+  },
+  "steps": {
+    "knowledge_ingestion": "Ingestion des connaissances",
+    "hypothesis_generation": "Génération d'hypothèses",
+    "interview_architect": "Architecte d'entretien",
+    "human_breakpoint": "Point de contrôle humain",
+    "gap_analysis": "Analyse des écarts",
+    "solution_architect": "Architecte de solutions",
+    "reporting": "Rapport"
+  },
+  "step1": {
+    "title": "Ingestion des connaissances",
+    "description": "Téléchargez les documents du client pour l'analyse IA",
+    "upload": "Télécharger des documents",
+    "upload_hint": "PDF, DOCX ou TXT — max 25 Mo chacun, jusqu'à 20 fichiers",
+    "drag_drop": "Glissez-déposez les fichiers ici, ou cliquez pour parcourir",
+    "documents": "Documents téléchargés",
+    "remove": "Supprimer",
+    "proceed": "Passer à la génération d'hypothèses",
+    "context_label": "Note contextuelle du consultant",
+    "context_placeholder": "Décrivez ce que vous savez des opérations de ce client..."
+  },
+  "step2": {
+    "title": "Génération d'hypothèses",
+    "description": "Analyse IA des documents pour identifier les goulots d'étranglement",
+    "trigger": "Générer les hypothèses",
+    "bottlenecks": "Goulots d'étranglement identifiés",
+    "add_bottleneck": "Ajouter un goulot d'étranglement",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "regenerate_item": "Régénérer cet élément",
+    "rerun": "Relancer l'analyse complète",
+    "save_edits": "Enregistrer les modifications",
+    "discard": "Annuler les modifications",
+    "severity": {
+      "low": "Faible",
+      "medium": "Moyen",
+      "high": "Élevé"
+    },
+    "automation_potential": {
+      "low": "Faible",
+      "medium": "Moyen",
+      "high": "Élevé"
+    }
+  },
+  "step3": {
+    "title": "Architecte d'entretien",
+    "description": "Générer un guide d'entretien structuré",
+    "stakeholder_roles": "Rôles des parties prenantes cibles",
+    "stakeholder_placeholder": "ex. Directeur des opérations, Directeur financier",
+    "trigger": "Générer le guide d'entretien",
+    "questions": "Questions d'entretien",
+    "add_question": "Ajouter une question",
+    "edit_scripts": "Modifier l'introduction / la conclusion",
+    "export_pdf": "Exporter en PDF",
+    "export_docx": "Exporter en DOCX"
+  },
+  "step4": {
+    "title": "Point de contrôle humain",
+    "description": "Soumettre la transcription et valider les résultats avant le traitement IA",
+    "badge": "Saisie validée par l'humain",
+    "badge_desc": "Cette étape nécessite le jugement humain. Le traitement IA reprend depuis votre transcription validée.",
+    "upload_transcript": "Télécharger la transcription",
+    "paste_transcript": "Coller le texte de la transcription",
+    "transcript_placeholder": "Collez votre transcription d'entretien ici...",
+    "interview_date": "Date de l'entretien",
+    "stakeholders": "Parties prenantes interrogées",
+    "stakeholders_placeholder": "ex. Marie Dupont (PDG), Jean Martin (Directeur des opérations)",
+    "notes": "Notes supplémentaires",
+    "notes_placeholder": "Contexte ou observations supplémentaires de l'entretien...",
+    "submit": "Soumettre la transcription",
+    "edit_transcript": "Modifier la transcription",
+    "ai_assist": "Assistance IA (Résumer / Annoter)"
+  },
+  "step5": {
+    "title": "Analyse des écarts",
+    "description": "Comparer les hypothèses IA avec les résultats des entretiens",
+    "trigger": "Lancer l'analyse des écarts",
+    "alignment_score": "Score d'alignement des hypothèses",
+    "findings": "Résultats de l'analyse des écarts",
+    "confirmed": "Confirmé",
+    "unconfirmed": "Non confirmé",
+    "new_bottlenecks": "Nouveaux goulots d'étranglement découverts",
+    "add_finding": "Ajouter un résultat",
+    "annotation": "Ajouter une annotation"
+  },
+  "step6": {
+    "title": "Architecte de solutions",
+    "description": "Générer des solutions d'automatisation avec analyse ROI",
+    "trigger": "Générer les solutions",
+    "solutions": "Solutions recommandées",
+    "total_roi": "ROI total estimé",
+    "roadmap": "Feuille de route de mise en œuvre",
+    "include": "Inclure dans la feuille de route",
+    "exclude": "Exclure de la feuille de route",
+    "add_solution": "Ajouter une solution",
+    "roi": {
+      "time_saved": "Heures économisées/mois",
+      "cost_reduction": "Réduction des coûts/an",
+      "payback": "Période de retour sur investissement",
+      "confidence": "Niveau de confiance"
+    }
+  },
+  "step7": {
+    "title": "Rapport",
+    "description": "Générer le rapport de conseil final",
+    "configure": "Configuration du rapport",
+    "client_name": "Nom du client",
+    "consultant_name": "Nom du consultant",
+    "report_language": "Langue du rapport",
+    "include_appendix": "Inclure l'annexe qualité",
+    "generate": "Générer le rapport",
+    "sections": {
+      "executive_summary": "Résumé exécutif",
+      "key_findings": "Résultats clés",
+      "solution_overview": "Vue d'ensemble des solutions",
+      "detailed_roadmap_markdown": "Feuille de route de mise en œuvre",
+      "consultant_commentary": "Commentaire du consultant"
+    },
+    "export_pdf": "Exporter en PDF",
+    "export_docx": "Exporter en DOCX",
+    "edit_section": "Modifier la section",
+    "regenerate_section": "Régénérer la section",
+    "regenerate_report": "Régénérer le rapport complet",
+    "add_commentary": "Ajouter un commentaire consultant"
+  },
+  "quality": {
+    "badge": "Score qualité",
+    "pending": "Évaluation en attente",
+    "evaluating": "Évaluation en cours...",
+    "passed": "Qualité validée",
+    "failed": "Qualité insuffisante",
+    "needs_review": "Révision requise",
+    "overridden": "Contournement accepté",
+    "pragmatism": "Pragmatisme",
+    "roi_focus": "Orientation ROI",
+    "override": "Contourner et continuer",
+    "override_reason": "Motif du contournement"
+  },
+  "editorial": {
+    "origin": {
+      "ai_generated": "Généré par IA",
+      "human_edit": "Modifié par l'humain",
+      "ai_reprocessed": "Retraité par IA",
+      "human_added": "Ajouté par l'humain"
+    },
+    "reprocess": "Régénérer cet élément",
+    "reprocess_instruction": "Instruction de raffinement (optionnel)",
+    "reprocess_instruction_placeholder": "ex. Rendez ceci plus spécifique à une entreprise de 15 personnes...",
+    "apply": "Appliquer",
+    "reject": "Rejeter",
+    "version_history": "Historique des versions",
+    "version": "Version {{version}}",
+    "edited_by_human": "Modifié par le consultant",
+    "generated_by_ai": "Généré par IA"
+  },
+  "collaborators": {
+    "title": "Membres de l'équipe",
+    "invite": "Inviter un collaborateur",
+    "email": "Adresse e-mail",
+    "role": "Rôle",
+    "editor": "Éditeur",
+    "viewer": "Lecteur",
+    "pending": "En attente",
+    "accepted": "Actif",
+    "revoked": "Révoqué",
+    "revoke": "Révoquer l'accès",
+    "invite_sent": "Invitation envoyée à {{email}}"
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "success": "Enregistré avec succès",
+    "required": "Obligatoire",
+    "optional": "Optionnel",
+    "back": "Retour",
+    "next": "Suivant",
+    "proceed": "Continuer",
+    "unsaved_changes": "Vous avez des modifications non enregistrées. Les ignorer ?",
+    "confirm_delete": "Êtes-vous sûr de vouloir supprimer cela ?",
+    "no_undo": "Cette action est irréversible."
+  }
+}

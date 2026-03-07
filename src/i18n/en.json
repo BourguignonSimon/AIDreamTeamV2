@@ -1,0 +1,236 @@
+{
+  "app": {
+    "name": "Operia",
+    "tagline": "AI-Augmented Consulting Platform"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "settings": "Settings",
+    "logout": "Sign out"
+  },
+  "auth": {
+    "sign_in": "Sign in",
+    "sign_up": "Sign up",
+    "sign_in_google": "Continue with Google",
+    "email": "Email address",
+    "password": "Password",
+    "forgot_password": "Forgot password?",
+    "reset_password": "Reset password",
+    "reset_sent": "Password reset email sent. Check your inbox.",
+    "no_account": "Don't have an account?",
+    "have_account": "Already have an account?"
+  },
+  "dashboard": {
+    "title": "Your Projects",
+    "subtitle": "All consulting engagements accessible to you",
+    "new_project": "New Project",
+    "no_projects": "No projects yet",
+    "no_projects_desc": "Create your first consulting project to get started.",
+    "active": "Active",
+    "archived": "Archived",
+    "completed": "Completed"
+  },
+  "project": {
+    "create": "Create Project",
+    "create_desc": "Set up a new consulting engagement",
+    "name": "Project name",
+    "client_name": "Client name",
+    "industry": "Industry",
+    "country": "Country",
+    "language": "Output language",
+    "context_summary": "Context summary",
+    "context_summary_hint": "Briefly describe the SME's context, key challenges, or engagement scope (max 500 words)",
+    "archive": "Archive project",
+    "duplicate": "Duplicate template",
+    "settings": "Project settings"
+  },
+  "steps": {
+    "knowledge_ingestion": "Knowledge Ingestion",
+    "hypothesis_generation": "Hypothesis Generation",
+    "interview_architect": "Interview Architect",
+    "human_breakpoint": "Human Breakpoint",
+    "gap_analysis": "Gap Analysis",
+    "solution_architect": "Solution Architect",
+    "reporting": "Reporting"
+  },
+  "step1": {
+    "title": "Knowledge Ingestion",
+    "description": "Upload the client's documents for AI analysis",
+    "upload": "Upload Documents",
+    "upload_hint": "PDF, DOCX, or TXT — max 25 MB each, up to 20 files",
+    "drag_drop": "Drag & drop files here, or click to browse",
+    "documents": "Uploaded Documents",
+    "remove": "Remove",
+    "proceed": "Proceed to Hypothesis Generation",
+    "context_label": "Consultant Context Note",
+    "context_placeholder": "Describe what you know about this client's operations and what you'd like the AI to focus on..."
+  },
+  "step2": {
+    "title": "Hypothesis Generation",
+    "description": "AI analysis of uploaded documents to identify operational bottlenecks",
+    "trigger": "Generate Hypotheses",
+    "bottlenecks": "Identified Bottlenecks",
+    "add_bottleneck": "Add Bottleneck",
+    "edit": "Edit",
+    "delete": "Delete",
+    "regenerate_item": "Regenerate this item",
+    "rerun": "Re-run full analysis",
+    "save_edits": "Save edits",
+    "discard": "Discard changes",
+    "severity": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "automation_potential": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
+  },
+  "step3": {
+    "title": "Interview Architect",
+    "description": "Generate a structured stakeholder interview guide",
+    "stakeholder_roles": "Target Stakeholder Roles",
+    "stakeholder_placeholder": "e.g. Operations Manager, Finance Director",
+    "trigger": "Generate Interview Guide",
+    "questions": "Interview Questions",
+    "add_question": "Add Question",
+    "edit_scripts": "Edit Introduction / Closing",
+    "export_pdf": "Export as PDF",
+    "export_docx": "Export as DOCX"
+  },
+  "step4": {
+    "title": "Human Breakpoint",
+    "description": "Submit interview transcript and validate findings before AI processing",
+    "badge": "Human-Validated Input",
+    "badge_desc": "This step requires human judgment. AI processing resumes from your validated transcript.",
+    "upload_transcript": "Upload Transcript",
+    "paste_transcript": "Paste transcript text",
+    "transcript_placeholder": "Paste your interview transcript here...",
+    "interview_date": "Interview Date",
+    "stakeholders": "Stakeholders Interviewed",
+    "stakeholders_placeholder": "e.g. Marie Dupont (CEO), Jean Martin (Operations Manager)",
+    "notes": "Additional Notes",
+    "notes_placeholder": "Any additional context or observations from the interview...",
+    "submit": "Submit Transcript",
+    "edit_transcript": "Edit Transcript",
+    "ai_assist": "AI Assist (Summarize / Annotate)"
+  },
+  "step5": {
+    "title": "Gap Analysis",
+    "description": "Compare AI hypotheses against interview findings",
+    "trigger": "Run Gap Analysis",
+    "alignment_score": "Hypothesis Alignment Score",
+    "findings": "Gap Findings",
+    "confirmed": "Confirmed",
+    "unconfirmed": "Unconfirmed",
+    "new_bottlenecks": "New Bottlenecks Discovered",
+    "add_finding": "Add Finding",
+    "annotation": "Add Annotation"
+  },
+  "step6": {
+    "title": "Solution Architect",
+    "description": "Generate automation solutions with ROI analysis",
+    "trigger": "Generate Solutions",
+    "solutions": "Recommended Solutions",
+    "total_roi": "Total Estimated ROI",
+    "roadmap": "Implementation Roadmap",
+    "include": "Include in roadmap",
+    "exclude": "Exclude from roadmap",
+    "add_solution": "Add Solution",
+    "roi": {
+      "time_saved": "Hours saved/month",
+      "cost_reduction": "Cost reduction/year",
+      "payback": "Payback period",
+      "confidence": "Confidence"
+    }
+  },
+  "step7": {
+    "title": "Reporting",
+    "description": "Generate the final consulting report",
+    "configure": "Report Configuration",
+    "client_name": "Client name",
+    "consultant_name": "Consultant name",
+    "report_language": "Report language",
+    "include_appendix": "Include quality gate appendix",
+    "generate": "Generate Report",
+    "sections": {
+      "executive_summary": "Executive Summary",
+      "key_findings": "Key Findings",
+      "solution_overview": "Solution Overview",
+      "detailed_roadmap_markdown": "Implementation Roadmap",
+      "consultant_commentary": "Consultant Commentary"
+    },
+    "export_pdf": "Export PDF",
+    "export_docx": "Export DOCX",
+    "edit_section": "Edit section",
+    "regenerate_section": "Regenerate section",
+    "regenerate_report": "Regenerate full report",
+    "add_commentary": "Add Consultant Commentary"
+  },
+  "quality": {
+    "badge": "Quality Score",
+    "pending": "Pending evaluation",
+    "evaluating": "Evaluating...",
+    "passed": "Quality passed",
+    "failed": "Quality failed",
+    "needs_review": "Needs review",
+    "overridden": "Override accepted",
+    "pragmatism": "Pragmatism",
+    "roi_focus": "ROI Focus",
+    "override": "Override & proceed",
+    "override_reason": "Reason for override"
+  },
+  "editorial": {
+    "origin": {
+      "ai_generated": "AI Generated",
+      "human_edit": "Human Edited",
+      "ai_reprocessed": "AI Re-processed",
+      "human_added": "Human Added"
+    },
+    "reprocess": "Regenerate this item",
+    "reprocess_instruction": "Refinement instruction (optional)",
+    "reprocess_instruction_placeholder": "e.g. Make this more specific to a 15-person company...",
+    "apply": "Apply",
+    "reject": "Reject",
+    "version_history": "Version History",
+    "version": "Version {{version}}",
+    "edited_by_human": "Edited by consultant",
+    "generated_by_ai": "Generated by AI"
+  },
+  "collaborators": {
+    "title": "Team Members",
+    "invite": "Invite Collaborator",
+    "email": "Email address",
+    "role": "Role",
+    "editor": "Editor",
+    "viewer": "Viewer",
+    "pending": "Pending",
+    "accepted": "Active",
+    "revoked": "Revoked",
+    "revoke": "Revoke access",
+    "invite_sent": "Invitation sent to {{email}}"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "close": "Close",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "success": "Saved successfully",
+    "required": "Required",
+    "optional": "Optional",
+    "back": "Back",
+    "next": "Next",
+    "proceed": "Proceed",
+    "unsaved_changes": "You have unsaved changes. Discard them?",
+    "confirm_delete": "Are you sure you want to delete this?",
+    "no_undo": "This action cannot be undone."
+  }
+}
