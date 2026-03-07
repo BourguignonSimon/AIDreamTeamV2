@@ -1,0 +1,46 @@
+# Supabase local development configuration
+# See https://supabase.com/docs/guides/cli/config for full reference
+
+[api]
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+
+[storage]
+file_size_limit = "26843545"  # 25 MiB per spec (FR-S1-01)
+
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["https://localhost:5173"]
+jwt_expiry = 86400  # 24 hours — FR-AUTH-04
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+
+[auth.external.google]
+enabled = true
+# client_id and secret configured via Supabase dashboard
+
+[realtime]
+enabled = true
+
+[edge_runtime]
+policy = "oneshot"
+inspector_port = 8083

@@ -1,0 +1,236 @@
+{
+  "app": {
+    "name": "Operia",
+    "tagline": "AI-Versterkt Adviesplatform"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projecten",
+    "settings": "Instellingen",
+    "logout": "Afmelden"
+  },
+  "auth": {
+    "sign_in": "Aanmelden",
+    "sign_up": "Registreren",
+    "sign_in_google": "Doorgaan met Google",
+    "email": "E-mailadres",
+    "password": "Wachtwoord",
+    "forgot_password": "Wachtwoord vergeten?",
+    "reset_password": "Wachtwoord resetten",
+    "reset_sent": "E-mail voor wachtwoord reset verstuurd. Controleer uw inbox.",
+    "no_account": "Nog geen account?",
+    "have_account": "Al een account?"
+  },
+  "dashboard": {
+    "title": "Uw Projecten",
+    "subtitle": "Alle adviesopdrachten die voor u toegankelijk zijn",
+    "new_project": "Nieuw Project",
+    "no_projects": "Nog geen projecten",
+    "no_projects_desc": "Maak uw eerste adviesproject aan om te beginnen.",
+    "active": "Actief",
+    "archived": "Gearchiveerd",
+    "completed": "Voltooid"
+  },
+  "project": {
+    "create": "Project Aanmaken",
+    "create_desc": "Een nieuwe adviesopdracht instellen",
+    "name": "Projectnaam",
+    "client_name": "Klantnaam",
+    "industry": "Sector",
+    "country": "Land",
+    "language": "Uitvoertaal",
+    "context_summary": "Contextsamenvatting",
+    "context_summary_hint": "Beschrijf kort de context van het MKB, de belangrijkste uitdagingen of de scope van de opdracht (max 500 woorden)",
+    "archive": "Project archiveren",
+    "duplicate": "Sjabloon dupliceren",
+    "settings": "Projectinstellingen"
+  },
+  "steps": {
+    "knowledge_ingestion": "Kennisopname",
+    "hypothesis_generation": "Hypothesegeneratie",
+    "interview_architect": "Interview Architect",
+    "human_breakpoint": "Menselijk Controlepunt",
+    "gap_analysis": "Kloof Analyse",
+    "solution_architect": "Oplossingsarchitect",
+    "reporting": "Rapportage"
+  },
+  "step1": {
+    "title": "Kennisopname",
+    "description": "Upload de documenten van de klant voor AI-analyse",
+    "upload": "Documenten Uploaden",
+    "upload_hint": "PDF, DOCX of TXT — max 25 MB per bestand, tot 20 bestanden",
+    "drag_drop": "Sleep bestanden hierheen of klik om te bladeren",
+    "documents": "Geüploade Documenten",
+    "remove": "Verwijderen",
+    "proceed": "Doorgaan naar Hypothesegeneratie",
+    "context_label": "Contextnota Consultant",
+    "context_placeholder": "Beschrijf wat u weet over de activiteiten van deze klant..."
+  },
+  "step2": {
+    "title": "Hypothesegeneratie",
+    "description": "AI-analyse van geüploade documenten om knelpunten te identificeren",
+    "trigger": "Hypothesen Genereren",
+    "bottlenecks": "Geïdentificeerde Knelpunten",
+    "add_bottleneck": "Knelpunt Toevoegen",
+    "edit": "Bewerken",
+    "delete": "Verwijderen",
+    "regenerate_item": "Dit item opnieuw genereren",
+    "rerun": "Volledige analyse opnieuw uitvoeren",
+    "save_edits": "Wijzigingen opslaan",
+    "discard": "Wijzigingen annuleren",
+    "severity": {
+      "low": "Laag",
+      "medium": "Gemiddeld",
+      "high": "Hoog"
+    },
+    "automation_potential": {
+      "low": "Laag",
+      "medium": "Gemiddeld",
+      "high": "Hoog"
+    }
+  },
+  "step3": {
+    "title": "Interview Architect",
+    "description": "Genereer een gestructureerde interviewgids voor stakeholders",
+    "stakeholder_roles": "Doelgroep Stakeholders",
+    "stakeholder_placeholder": "bijv. Operationeel Manager, Financieel Directeur",
+    "trigger": "Interviewgids Genereren",
+    "questions": "Interviewvragen",
+    "add_question": "Vraag Toevoegen",
+    "edit_scripts": "Inleiding / Afsluiting Bewerken",
+    "export_pdf": "Exporteren als PDF",
+    "export_docx": "Exporteren als DOCX"
+  },
+  "step4": {
+    "title": "Menselijk Controlepunt",
+    "description": "Dien het interviewtranscript in en valideer bevindingen vóór AI-verwerking",
+    "badge": "Door Mens Gevalideerde Invoer",
+    "badge_desc": "Deze stap vereist menselijk oordeel. AI-verwerking wordt hervat vanuit uw gevalideerde transcript.",
+    "upload_transcript": "Transcript Uploaden",
+    "paste_transcript": "Transcripttekst plakken",
+    "transcript_placeholder": "Plak hier uw interviewtranscript...",
+    "interview_date": "Interviewdatum",
+    "stakeholders": "Geïnterviewde Stakeholders",
+    "stakeholders_placeholder": "bijv. Marie Dupont (CEO), Jan Martens (Operationeel Manager)",
+    "notes": "Aanvullende Notities",
+    "notes_placeholder": "Aanvullende context of observaties uit het interview...",
+    "submit": "Transcript Indienen",
+    "edit_transcript": "Transcript Bewerken",
+    "ai_assist": "AI-hulp (Samenvatten / Annoteren)"
+  },
+  "step5": {
+    "title": "Kloof Analyse",
+    "description": "Vergelijk AI-hypothesen met de bevindingen uit interviews",
+    "trigger": "Kloof Analyse Uitvoeren",
+    "alignment_score": "Hypothese Uitlijnsscore",
+    "findings": "Kloof Bevindingen",
+    "confirmed": "Bevestigd",
+    "unconfirmed": "Niet bevestigd",
+    "new_bottlenecks": "Nieuw Ontdekte Knelpunten",
+    "add_finding": "Bevinding Toevoegen",
+    "annotation": "Annotatie Toevoegen"
+  },
+  "step6": {
+    "title": "Oplossingsarchitect",
+    "description": "Genereer automatiseringsoplossingen met ROI-analyse",
+    "trigger": "Oplossingen Genereren",
+    "solutions": "Aanbevolen Oplossingen",
+    "total_roi": "Totaal Geschat ROI",
+    "roadmap": "Implementatie Roadmap",
+    "include": "Opnemen in roadmap",
+    "exclude": "Uitsluiten van roadmap",
+    "add_solution": "Oplossing Toevoegen",
+    "roi": {
+      "time_saved": "Uren bespaard/maand",
+      "cost_reduction": "Kostenreductie/jaar",
+      "payback": "Terugverdientijd",
+      "confidence": "Betrouwbaarheid"
+    }
+  },
+  "step7": {
+    "title": "Rapportage",
+    "description": "Genereer het definitieve adviesrapport",
+    "configure": "Rapportconfiguratie",
+    "client_name": "Klantnaam",
+    "consultant_name": "Naam consultant",
+    "report_language": "Rapporttaal",
+    "include_appendix": "Kwaliteitsbijlage opnemen",
+    "generate": "Rapport Genereren",
+    "sections": {
+      "executive_summary": "Managementsamenvatting",
+      "key_findings": "Belangrijkste Bevindingen",
+      "solution_overview": "Overzicht Oplossingen",
+      "detailed_roadmap_markdown": "Implementatie Roadmap",
+      "consultant_commentary": "Commentaar Consultant"
+    },
+    "export_pdf": "Exporteren als PDF",
+    "export_docx": "Exporteren als DOCX",
+    "edit_section": "Sectie bewerken",
+    "regenerate_section": "Sectie opnieuw genereren",
+    "regenerate_report": "Volledig rapport opnieuw genereren",
+    "add_commentary": "Commentaar Consultant Toevoegen"
+  },
+  "quality": {
+    "badge": "Kwaliteitsscore",
+    "pending": "Evaluatie in afwachting",
+    "evaluating": "Evalueren...",
+    "passed": "Kwaliteit goedgekeurd",
+    "failed": "Kwaliteit onvoldoende",
+    "needs_review": "Controle vereist",
+    "overridden": "Overschrijving geaccepteerd",
+    "pragmatism": "Pragmatisme",
+    "roi_focus": "ROI-gerichtheid",
+    "override": "Overschrijven en doorgaan",
+    "override_reason": "Reden voor overschrijving"
+  },
+  "editorial": {
+    "origin": {
+      "ai_generated": "AI Gegenereerd",
+      "human_edit": "Menselijk Bewerkt",
+      "ai_reprocessed": "AI Herverwerkt",
+      "human_added": "Menselijk Toegevoegd"
+    },
+    "reprocess": "Dit item opnieuw genereren",
+    "reprocess_instruction": "Verfijningsinstructie (optioneel)",
+    "reprocess_instruction_placeholder": "bijv. Maak dit specifieker voor een bedrijf van 15 personen...",
+    "apply": "Toepassen",
+    "reject": "Afwijzen",
+    "version_history": "Versiegeschiedenis",
+    "version": "Versie {{version}}",
+    "edited_by_human": "Bewerkt door consultant",
+    "generated_by_ai": "Gegenereerd door AI"
+  },
+  "collaborators": {
+    "title": "Teamleden",
+    "invite": "Medewerker Uitnodigen",
+    "email": "E-mailadres",
+    "role": "Rol",
+    "editor": "Redacteur",
+    "viewer": "Kijker",
+    "pending": "In afwachting",
+    "accepted": "Actief",
+    "revoked": "Ingetrokken",
+    "revoke": "Toegang intrekken",
+    "invite_sent": "Uitnodiging verstuurd naar {{email}}"
+  },
+  "common": {
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "add": "Toevoegen",
+    "close": "Sluiten",
+    "confirm": "Bevestigen",
+    "loading": "Laden...",
+    "error": "Er is iets misgegaan",
+    "success": "Succesvol opgeslagen",
+    "required": "Verplicht",
+    "optional": "Optioneel",
+    "back": "Terug",
+    "next": "Volgende",
+    "proceed": "Doorgaan",
+    "unsaved_changes": "U heeft niet-opgeslagen wijzigingen. Verwerpen?",
+    "confirm_delete": "Weet u zeker dat u dit wilt verwijderen?",
+    "no_undo": "Deze actie kan niet ongedaan worden gemaakt."
+  }
+}
