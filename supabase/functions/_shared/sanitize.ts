@@ -11,20 +11,29 @@
 /**
  * Patterns that commonly indicate prompt injection attempts.
  * Specification: Section 6.4
+ *
+ * SEC-03: All patterns use \b word-boundary anchors to avoid false positives on
+ * common business language (e.g. "we need to act as a bridge between...").
  */
 const INJECTION_PATTERNS: RegExp[] = [
-  /ignore previous instructions/i,
-  /ignore all previous/i,
-  /system prompt/i,
-  /you are now/i,
-  /disregard the above/i,
-  /disregard all previous/i,
-  /act as/i,
-  /new instructions/i,
-  /forget your instructions/i,
-  /override your/i,
-  /jailbreak/i,
+  /\bignore\s+(?:all\s+)?previous\s+instructions\b/i,
+  /\bignore\s+all\s+previous\b/i,
+  /\bsystem\s+prompt\b/i,
+  /\byou\s+are\s+now\b/i,
+  /\bdisregard\s+(?:the\s+above|all\s+previous)\b/i,
+  /\bact\s+as\s+(?:an?\s+)?(?:AI|assistant|GPT|Claude|LLM)\b/i,
+  /\bnew\s+instructions\b/i,
+  /\bforget\s+your\s+instructions\b/i,
+  /\boverride\s+your\b/i,
+  /\bjailbreak\b/i,
+  /\bDAN\s+mode\b/i,
 ];
+
+/**
+ * Maximum allowed character length for a single document chunk.
+ * Guards against runaway payloads that could exhaust memory (SEC-03).
+ */
+const MAX_CHUNK_CHARS = 800_000;
 
 /**
  * Returns true if the text appears to contain a prompt injection attempt.
@@ -53,11 +62,17 @@ export function sanitizeTranscriptContent(transcript: string): string {
 }
 
 /**
- * Validates a batch of document chunks for injection attempts.
- * Throws if any chunk contains suspicious content.
+ * Validates a batch of document chunks for injection attempts and size.
+ * Throws if any chunk contains suspicious content or exceeds the max size guard (SEC-03).
  */
 export function validateDocumentChunks(chunks: string[]): void {
   for (let i = 0; i < chunks.length; i++) {
+    if (chunks[i].length > MAX_CHUNK_CHARS) {
+      throw new Error(
+        `Document chunk ${i} exceeds the maximum allowed size (${MAX_CHUNK_CHARS} chars). ` +
+        `Please split the document into smaller parts.`
+      );
+    }
     if (containsInjectionAttempt(chunks[i])) {
       throw new Error(
         `Document chunk ${i} contains content that may be a prompt injection attempt. ` +

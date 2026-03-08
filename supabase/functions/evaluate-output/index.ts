@@ -33,13 +33,17 @@ Deno.serve(async (req: Request) => {
 
   const supabase = createServiceClient();
 
+  // Parse body once — Request body stream can only be consumed once in Deno (BUG-01)
+  let body: { node_id: string; project_id: string };
   try {
-    const body = await req.json() as {
-      node_id: string;
-      project_id: string;
-    };
+    body = await req.json() as { node_id: string; project_id: string };
+  } catch {
+    return errorResponse('Invalid JSON body', 400);
+  }
 
-    const { node_id, project_id } = body;
+  const { node_id, project_id } = body;
+
+  try {
 
     if (!node_id || !project_id) {
       return errorResponse('node_id and project_id are required', 422);
@@ -158,12 +162,11 @@ Deno.serve(async (req: Request) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('[evaluate-output] Error:', errorMessage);
 
-    // Best-effort update of gate to reflect failure
-    const body = await req.json().catch(() => ({})) as { node_id?: string };
-    if (body.node_id) {
+    // Best-effort update of gate to reflect failure — use already-parsed node_id (BUG-01)
+    if (node_id) {
       await supabase.from('ai_quality_gates')
         .update({ evaluation_status: 'completed', status: 'failed' })
-        .eq('node_id', body.node_id);
+        .eq('node_id', node_id);
     }
 
     return errorResponse(errorMessage, 500);

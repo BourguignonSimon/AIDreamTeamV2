@@ -2,6 +2,23 @@
 -- Implements the full schema from Section 5.1 of OPERIA-MRD-001
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+-- TABLE: domain_templates
+-- Must be created BEFORE consulting_projects because that table holds a FK
+-- to domain_templates.id. Rows are seeded in migration 009.
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CREATE TABLE domain_templates (
+  id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name                     TEXT NOT NULL,
+  description              TEXT,
+  industry                 TEXT,
+  focus_areas              TEXT[],
+  default_questions        TEXT[],
+  typical_bottlenecks      TEXT[],
+  prompt_injection_context TEXT,
+  created_at               TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- TABLE: consulting_projects
 -- Owner table for all consulting engagements
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -19,6 +36,7 @@ CREATE TABLE consulting_projects (
                       CHECK (status IN ('active', 'archived', 'completed')),
   current_step        TEXT NOT NULL DEFAULT 'knowledge_ingestion',
   sme_profile         JSONB,                         -- SMEProfile object (Section 16)
+  domain_template_id  UUID REFERENCES domain_templates(id),
   created_at          TIMESTAMPTZ DEFAULT NOW(),
   updated_at          TIMESTAMPTZ DEFAULT NOW()
 );

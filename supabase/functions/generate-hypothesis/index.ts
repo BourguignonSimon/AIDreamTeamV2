@@ -81,14 +81,23 @@ Deno.serve(async (req: Request) => {
     // 4. Read document content from storage (via signed URLs or direct storage access)
     const documentTexts: string[] = [];
     for (const doc of documents) {
-      const { data: fileData } = await supabase.storage
+      const { data: fileData, error: downloadError } = await supabase.storage
         .from('project-documents')
         .download(doc.storage_path);
 
-      if (fileData) {
-        const text = await fileData.text();
-        documentTexts.push(`[Document: ${doc.filename}]\n${text}`);
+      if (downloadError || !fileData) {
+        // BUG-06: Warn per document rather than silently skipping
+        console.warn(`[generate-hypothesis] Failed to download document "${doc.filename}": ${downloadError?.message ?? 'no data'}`);
+        continue;
       }
+
+      const text = await fileData.text();
+      documentTexts.push(`[Document: ${doc.filename}]\n${text}`);
+    }
+
+    // BUG-06: Hard-fail if every document download failed — an empty context will hallucinate
+    if (documentTexts.length === 0) {
+      throw new Error('All document downloads failed; cannot generate hypothesis without document content');
     }
 
     // 5. Validate for prompt injection
@@ -162,8 +171,15 @@ Deno.serve(async (req: Request) => {
       p_step_type:        'hypothesis_generation',
       p_input_data:       { knowledge_node_id: step1Node.id },
       p_output_data:      {
-        bottlenecks:          parsedOutput.bottlenecks,
+        bottlenecks:           parsedOutput.bottlenecks,
         automation_candidates: parsedOutput.automation_candidates ?? [],
+        // BUG-07: include Step2OutputData required fields with safe defaults when AI omits them
+        executive_summary:     typeof parsedOutput.executive_summary === 'string'
+                                 ? parsedOutput.executive_summary
+                                 : '',
+        total_impact_score:    typeof parsedOutput.total_impact_score === 'number'
+                                 ? parsedOutput.total_impact_score
+                                 : 0,
         model_metadata: {
           provider:           aiResponse.provider,
           model_id:           aiResponse.model_id,

@@ -22,7 +22,7 @@
  * isDirty and dirtyItems.size remain truthful for the Save bar.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { deepClone } from '@/lib/utils';
 import type { WorkflowNode, WorkflowStep, UseStepEditorReturn } from '@/lib/types';
@@ -39,6 +39,16 @@ export function useStepEditor<T extends object>(
   const [pendingCallIds, setPendingCallIds] = useState<string[]>([]);
 
   const isDirty = dirtyItems.size > 0;
+
+  // BUG-03: Reset draft when the active node changes (e.g. after save returns a new node_id
+  // and Realtime updates activeNode). Only reset when there are no unsaved edits to avoid
+  // clobbering concurrent in-flight user changes.
+  useEffect(() => {
+    if (dirtyItems.size === 0) {
+      setDraft(deepClone(activeNode?.output_data ?? ({} as T)));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeNode?.id]);
 
   /**
    * Merges a partial update into the draft for one item.
@@ -152,9 +162,10 @@ export function useStepEditor<T extends object>(
 
   /**
    * Saves the current draft as a new human-edit versioned node.
+   * Accepts optional human_overrides for Step 7 section-level overrides.
    * Resets dirty tracking on success.
    */
-  const save = useCallback(async (): Promise<{ node_id: string }> => {
+  const save = useCallback(async (human_overrides?: Record<string, string>): Promise<{ node_id: string }> => {
     if (!activeNode) throw new Error('No active node to save against');
 
     setIsSaving(true);
@@ -165,7 +176,7 @@ export function useStepEditor<T extends object>(
           step_type:        stepType,
           source_node_id:   activeNode.id,
           output_data:      draft,
-          human_overrides:  null,  // Step 7 overrides handled separately
+          human_overrides:  human_overrides ?? null,
           applied_call_ids: pendingCallIds,
         },
       });
