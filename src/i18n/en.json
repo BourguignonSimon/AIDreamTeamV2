@@ -78,6 +78,8 @@
     "rerun": "Re-run full analysis",
     "save_edits": "Save edits",
     "discard": "Discard changes",
+    "executive_summary": "Executive Summary",
+    "summary_placeholder": "AI-generated executive summary of identified bottlenecks...",
     "severity": {
       "low": "Low",
       "medium": "Medium",
@@ -156,6 +158,14 @@
     "report_language": "Report language",
     "include_appendix": "Include quality gate appendix",
     "generate": "Generate Report",
+    "trigger": "Generate Report",
+    "report_ready": "Report ready",
+    "download_pdf": "Download PDF",
+    "executive_summary": "Executive Summary",
+    "methodology": "Methodology",
+    "key_findings": "Key Findings",
+    "roadmap": "Implementation Roadmap",
+    "closing_note": "Consultant's Closing Note",
     "sections": {
       "executive_summary": "Executive Summary",
       "key_findings": "Key Findings",
@@ -231,6 +241,11 @@
     "proceed": "Proceed",
     "unsaved_changes": "You have unsaved changes. Discard them?",
     "confirm_delete": "Are you sure you want to delete this?",
-    "no_undo": "This action cannot be undone."
+    "no_undo": "This action cannot be undone.",
+    "settings": "Settings",
+    "save_edits": "Save edits",
+    "generating": "Generating...",
+    "rerun_ai": "Re-run AI analysis",
+    "rerun_hint": "Re-running will create a new version and preserve the current one."
   }
 }

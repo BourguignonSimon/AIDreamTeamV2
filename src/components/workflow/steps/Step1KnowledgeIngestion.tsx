@@ -118,6 +118,14 @@ export default function Step1KnowledgeIngestion({
     setUploading(true);
     setUploadError(null);
 
+    // Resolve current user id once before the loop — uploaded_by is NOT NULL in schema
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setUploadError('Authentication required to upload documents');
+      setUploading(false);
+      return;
+    }
+
     for (const file of Array.from(files)) {
       if (file.size > MAX_FILE_SIZE_BYTES) {
         setUploadError(`${file.name} exceeds 25 MB limit`);
@@ -141,6 +149,7 @@ export default function Step1KnowledgeIngestion({
         .from('project_documents')
         .insert({
           project_id:   project.id,
+          uploaded_by:  user.id,
           storage_path: storagePath,
           filename:     file.name,
           mime_type:    file.type,

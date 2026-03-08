@@ -14,9 +14,6 @@ import { buildHypothesisPrompt } from '../_shared/prompts.ts';
 import { sanitizeDocumentContent, validateDocumentChunks, estimateTokens, TOKEN_BUDGETS, chunkText } from '../_shared/sanitize.ts';
 import { jsonResponse, errorResponse } from '../_shared/auth.ts';
 
-const MAX_RETRIES = 3;
-const RETRY_DELAYS_MS = [5_000, 30_000, 300_000];
-
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } });

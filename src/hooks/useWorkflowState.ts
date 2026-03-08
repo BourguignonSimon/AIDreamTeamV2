@@ -192,7 +192,12 @@ export function useWorkflowState(projectId: string): UseWorkflowStateReturn {
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('[Realtime] workflow_nodes subscription error:', err ?? status);
+          dispatch({ type: 'ERROR', message: 'Realtime connection lost. Please refresh the page.' });
+        }
+      });
 
     // ai_quality_gates: async evaluation results (AIQualityBadge updates)
     const gatesChannel = supabase
@@ -206,7 +211,11 @@ export function useWorkflowState(projectId: string): UseWorkflowStateReturn {
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('[Realtime] ai_quality_gates subscription error:', err ?? status);
+        }
+      });
 
     // pipeline_executions: progress indicators while AI steps run
     const executionsChannel = supabase
@@ -220,7 +229,11 @@ export function useWorkflowState(projectId: string): UseWorkflowStateReturn {
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('[Realtime] pipeline_executions subscription error:', err ?? status);
+        }
+      });
 
     return () => {
       void supabase.removeChannel(nodesChannel);

@@ -78,6 +78,8 @@
     "rerun": "Relancer l'analyse complète",
     "save_edits": "Enregistrer les modifications",
     "discard": "Annuler les modifications",
+    "executive_summary": "Résumé exécutif",
+    "summary_placeholder": "Résumé exécutif généré par IA des goulots d'étranglement identifiés...",
     "severity": {
       "low": "Faible",
       "medium": "Moyen",
@@ -156,6 +158,14 @@
     "report_language": "Langue du rapport",
     "include_appendix": "Inclure l'annexe qualité",
     "generate": "Générer le rapport",
+    "trigger": "Générer le rapport",
+    "report_ready": "Rapport prêt",
+    "download_pdf": "Télécharger le PDF",
+    "executive_summary": "Résumé exécutif",
+    "methodology": "Méthodologie",
+    "key_findings": "Résultats clés",
+    "roadmap": "Feuille de route",
+    "closing_note": "Note de clôture du consultant",
     "sections": {
       "executive_summary": "Résumé exécutif",
       "key_findings": "Résultats clés",
@@ -231,6 +241,11 @@
     "proceed": "Continuer",
     "unsaved_changes": "Vous avez des modifications non enregistrées. Les ignorer ?",
     "confirm_delete": "Êtes-vous sûr de vouloir supprimer cela ?",
-    "no_undo": "Cette action est irréversible."
+    "no_undo": "Cette action est irréversible.",
+    "settings": "Paramètres",
+    "save_edits": "Enregistrer les modifications",
+    "generating": "Génération en cours...",
+    "rerun_ai": "Relancer l'analyse IA",
+    "rerun_hint": "Relancer créera une nouvelle version tout en conservant la version actuelle."
   }
 }

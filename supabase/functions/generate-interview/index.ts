@@ -60,16 +60,20 @@ Deno.serve(async (req: Request) => {
       throw new Error('Hypothesis generation must be completed before interview guide can be created');
     }
 
-    // 3. Fetch step input for stakeholder roles
-    // The orchestrator action includes target_stakeholder_roles in the execution record
+    // 3. Fetch step input for stakeholder roles from the execution record.
+    // The orchestrator passes target_stakeholder_roles via the body received here,
+    // but also stored in the pipeline_executions row for auditability.
     const { data: execution } = await supabase
       .from('pipeline_executions')
       .select('*')
       .eq('id', executionId)
       .single();
 
-    // Default stakeholder roles if not specified
-    const stakeholderRoles: string[] = ['Operations Manager', 'Team Lead'];
+    // Read stakeholder roles from execution payload; fall back to sensible defaults
+    const payloadRoles = (execution as any)?.stakeholder_roles;
+    const stakeholderRoles: string[] = Array.isArray(payloadRoles) && payloadRoles.length > 0
+      ? payloadRoles
+      : ['Operations Manager', 'Team Lead'];
 
     // 4. Build prompt with bottlenecks from Step 2
     const step2Output = step2Node.output_data as {

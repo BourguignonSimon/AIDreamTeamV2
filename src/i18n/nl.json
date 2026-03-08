@@ -78,6 +78,8 @@
     "rerun": "Volledige analyse opnieuw uitvoeren",
     "save_edits": "Wijzigingen opslaan",
     "discard": "Wijzigingen annuleren",
+    "executive_summary": "Managementsamenvatting",
+    "summary_placeholder": "Door AI gegenereerde managementsamenvatting van geïdentificeerde knelpunten...",
     "severity": {
       "low": "Laag",
       "medium": "Gemiddeld",
@@ -156,6 +158,14 @@
     "report_language": "Rapporttaal",
     "include_appendix": "Kwaliteitsbijlage opnemen",
     "generate": "Rapport Genereren",
+    "trigger": "Rapport Genereren",
+    "report_ready": "Rapport klaar",
+    "download_pdf": "PDF Downloaden",
+    "executive_summary": "Managementsamenvatting",
+    "methodology": "Methodologie",
+    "key_findings": "Belangrijkste Bevindingen",
+    "roadmap": "Implementatie Roadmap",
+    "closing_note": "Afsluitende nota consultant",
     "sections": {
       "executive_summary": "Managementsamenvatting",
       "key_findings": "Belangrijkste Bevindingen",
@@ -231,6 +241,11 @@
     "proceed": "Doorgaan",
     "unsaved_changes": "U heeft niet-opgeslagen wijzigingen. Verwerpen?",
     "confirm_delete": "Weet u zeker dat u dit wilt verwijderen?",
-    "no_undo": "Deze actie kan niet ongedaan worden gemaakt."
+    "no_undo": "Deze actie kan niet ongedaan worden gemaakt.",
+    "settings": "Instellingen",
+    "save_edits": "Wijzigingen opslaan",
+    "generating": "Genereren...",
+    "rerun_ai": "AI-analyse opnieuw uitvoeren",
+    "rerun_hint": "Opnieuw uitvoeren maakt een nieuwe versie en behoudt de huidige versie."
   }
 }

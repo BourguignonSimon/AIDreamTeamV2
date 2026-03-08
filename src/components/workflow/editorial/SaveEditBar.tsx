@@ -55,7 +55,7 @@ export default function SaveEditBar({
           {isSaving ? (
             <><Loader2 className="h-4 w-4 animate-spin" /> {t('common.loading')}</>
           ) : (
-            <><Save className="h-4 w-4" /> {t('step2.save_edits')}</>
+            <><Save className="h-4 w-4" /> {t('common.save_edits')}</>
           )}
         </button>
       </div>

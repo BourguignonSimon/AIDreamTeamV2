@@ -192,7 +192,7 @@ export interface ProjectCollaborator {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export interface ModelCallMetadata {
-  provider: 'google' | 'anthropic' | 'openai';
+  provider: 'google' | 'anthropic' | 'openai' | 'lovable_gateway';
   model_id: string;
   prompt_tokens: number;
   completion_tokens: number;

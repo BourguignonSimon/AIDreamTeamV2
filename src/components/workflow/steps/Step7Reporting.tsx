@@ -257,9 +257,7 @@ export default function Step7Reporting({
               isReprocessing={!!reprocessHook.isReprocessing['methodology_note']}
               isReprocessPanelOpen={openReprocessPanel === 'methodology_note'}
               pendingRevision={(pendingRevisions['methodology_note'] as { item: string } | undefined)?.item}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-                editor.updateRoot({ methodology_note: e.target.value })
-              }}
+              onChange={(val) => editor.updateRoot({ methodology_note: val })}
               onRequestReprocess={(instruction) =>
                 void handleReprocess('methodology_note', instruction)
               }

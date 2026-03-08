@@ -89,26 +89,30 @@ export function handleCORS(req: Request): Response | null {
 
 /**
  * Creates a JSON error response with the appropriate status code.
+ * Pass requestOrigin (from req.headers.get('Origin')) to ensure the correct
+ * CORS origin is reflected when ALLOWED_ORIGINS is configured.
  */
-export function errorResponse(message: string, status: number): Response {
+export function errorResponse(message: string, status: number, requestOrigin?: string): Response {
   return new Response(
     JSON.stringify({ error: message }),
     {
       status,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders(requestOrigin) },
     }
   );
 }
 
 /**
  * Creates a JSON success response.
+ * Pass requestOrigin (from req.headers.get('Origin')) to ensure the correct
+ * CORS origin is reflected when ALLOWED_ORIGINS is configured.
  */
-export function jsonResponse(data: unknown, status = 200): Response {
+export function jsonResponse(data: unknown, status = 200, requestOrigin?: string): Response {
   return new Response(
     JSON.stringify(data),
     {
       status,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders(requestOrigin) },
     }
   );
 }
