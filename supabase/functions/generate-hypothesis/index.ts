@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
     // 1. Fetch project metadata
     const { data: project, error: projectError } = await supabase
       .from('consulting_projects')
-      .select('id, client_name, industry, country, language, context_summary')
+      .select('id, client_name, industry, country, language, context_summary, domain_template:domain_template_id(*)')
       .eq('id', project_id)
       .single();
 
@@ -137,6 +137,7 @@ Deno.serve(async (req: Request) => {
       language: project.language,
       documentContent,
       contextSummary: project.context_summary ?? undefined,
+      domainContext: (project as any).domain_template?.prompt_injection_context ?? undefined,
     });
 
     const aiResponse = await callAIWithFallback(prompt);

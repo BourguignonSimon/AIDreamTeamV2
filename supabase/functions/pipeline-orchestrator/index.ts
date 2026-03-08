@@ -21,6 +21,7 @@ import { verifyJWT, handleCORS, errorResponse, jsonResponse, AuthError } from '.
 const STEP_FUNCTION_MAP: Record<string, string> = {
   hypothesis_generation: 'generate-hypothesis',
   interview_architect:  'generate-interview',
+  human_breakpoint:     'complete-human-breakpoint',
   gap_analysis:         'analyze-gaps',
   solution_architect:   'generate-solutions',
   reporting:            'generate-report',
@@ -50,9 +51,11 @@ Deno.serve(async (req: Request) => {
     const user = await verifyJWT(req);
 
     // 2. Parse request body
-    const { project_id, action } = await req.json() as {
+    const body = await req.json();
+    const { project_id, action, payload } = body as {
       project_id: string;
       action: string;
+      payload?: any;
     };
 
     if (!project_id || !action) {
@@ -97,20 +100,23 @@ Deno.serve(async (req: Request) => {
     }
 
     // 6. Check for in-flight execution to prevent double-triggering
-    const { data: existingExecution } = await supabase
-      .from('pipeline_executions')
-      .select('id, status')
-      .eq('project_id', project_id)
-      .eq('step_type', nextStep)
-      .in('status', ['queued', 'running'])
-      .maybeSingle();
+    // (except for human steps which can be re-completed)
+    if (nextStep !== 'human_breakpoint') {
+      const { data: existingExecution } = await supabase
+        .from('pipeline_executions')
+        .select('id, status')
+        .eq('project_id', project_id)
+        .eq('step_type', nextStep)
+        .in('status', ['queued', 'running'])
+        .maybeSingle();
 
-    if (existingExecution) {
-      return jsonResponse({
-        status: 'already_queued',
-        step: nextStep,
-        execution_id: existingExecution.id,
-      });
+      if (existingExecution) {
+        return jsonResponse({
+          status: 'already_queued',
+          step: nextStep,
+          execution_id: existingExecution.id,
+        });
+      }
     }
 
     // 7. Queue the execution record
@@ -146,6 +152,7 @@ Deno.serve(async (req: Request) => {
             execution_id: execution.id,
             project_id,
             triggered_by: user.id,
+            payload: payload ?? null,
           }),
         }
       ).catch((err) => {
@@ -159,7 +166,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    console.log(`[orchestrator] Queued ${nextStep} as execution ${execution.id} for project ${project_id}`);
+    console.log(`[orchestrator] Queued ${nextStep} as execution ${execution.id} for project ${project_id}${payload ? ' with payload' : ''}`);
 
     return jsonResponse(
       { status: 'queued', step: nextStep, execution_id: execution.id },
@@ -181,11 +188,12 @@ Deno.serve(async (req: Request) => {
  */
 function resolveNextStep(action: string): string | null {
   const actionMap: Record<string, string> = {
-    'generate_hypothesis':  'hypothesis_generation',
-    'generate_interview':   'interview_architect',
-    'analyze_gaps':         'gap_analysis',
-    'generate_solutions':   'solution_architect',
-    'generate_report':      'reporting',
+    'generate_hypothesis':    'hypothesis_generation',
+    'generate_interview':     'interview_architect',
+    'complete_human_breakpoint': 'human_breakpoint',
+    'analyze_gaps':           'gap_analysis',
+    'generate_solutions':     'solution_architect',
+    'generate_report':        'reporting',
   };
   return actionMap[action] ?? null;
 }

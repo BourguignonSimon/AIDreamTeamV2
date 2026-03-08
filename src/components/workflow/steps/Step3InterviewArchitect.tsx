@@ -7,9 +7,10 @@
  * Spec: Section 3.3, FR-S3-01 through FR-S3-HEC-08
  */
 
-import { useState } from 'react';
+import React, { useState } from 'react';
+import type { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, Plus, Loader2, GripVertical } from 'lucide-react';
+import { Play, Plus, Loader2, Save } from 'lucide-react';
 import type { ConsultingProject, AnyWorkflowNode, AIQualityGate, PipelineExecution, InterviewQuestion, StepStatus, Step3OutputData } from '@/lib/types';
 import { WorkflowStep, getActiveNode } from '@/lib/types';
 import { PIPELINE_ACTIONS } from '@/lib/constants';
@@ -41,15 +42,17 @@ export default function Step3InterviewArchitect({
   const { advance, isAdvancing } = usePipelineAdvance();
   const [stakeholderRoles, setStakeholderRoles] = useState('');
 
-  const activeNode = getActiveNode(nodes as AnyWorkflowNode[], WorkflowStep.INTERVIEW_ARCHITECT);
+  const activeNode = getActiveNode(nodes as AnyWorkflowNode[], WorkflowStep.INTERVIEW_ARCHITECT) as any;
   const gate = activeNode ? gates.find((g) => g.node_id === activeNode.id) : null;
 
   const editor = useStepEditor<Step3OutputData>(
     WorkflowStep.INTERVIEW_ARCHITECT,
-    activeNode as AnyWorkflowNode | null
+    activeNode as unknown as import('@/lib/types').WorkflowNode<unknown, Step3OutputData> | null
   );
-
+  
   const reprocessHook = useTargetedReprocess(project.id, activeNode?.id ?? '');
+  const [openReprocessId, setOpenReprocessId] = useState<string | null>(null);
+  const [pendingRevisions, setPendingRevisions] = useState<Record<string, unknown>>({});
   const isRunning = stepStatus === 'running';
   const hasOutput = activeNode?.execution_status === 'completed' && editor.draft?.questions;
 
@@ -59,6 +62,39 @@ export default function Step3InterviewArchitect({
       action: PIPELINE_ACTIONS.GENERATE_INTERVIEW,
       metadata: { stakeholder_roles: stakeholderRoles.split(',').map((r) => r.trim()).filter(Boolean) },
     });
+  }
+
+  async function handleReprocessItem(itemId: string, instruction?: string) {
+    setOpenReprocessId(itemId);
+    setPendingRevisions((prev: Record<string, unknown>) => ({ ...prev, [itemId]: undefined }));
+    
+    const result = await reprocessHook.reprocess({
+      step_type: WorkflowStep.INTERVIEW_ARCHITECT,
+      item_type: 'question',
+      item_id: itemId,
+      instruction,
+    });
+
+    if (result?.revised_item) {
+      setPendingRevisions((prev: Record<string, unknown>) => ({ ...prev, [itemId]: { ...result, item: result.revised_item } }));
+    }
+  }
+
+  function handleAcceptRevision(itemId: string) {
+    const revision = pendingRevisions[itemId] as { item: any, callId: string } | undefined;
+    if (revision) {
+      editor.applyReprocessResult(itemId, revision.item, revision.callId);
+    }
+    handleRejectRevision(itemId);
+  }
+
+  function handleRejectRevision(itemId: string) {
+    setPendingRevisions((prev: Record<string, unknown>) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
+    setOpenReprocessId(null);
   }
 
   const questions = ((editor.draft?.questions ?? []) as InterviewQuestion[])
@@ -74,26 +110,33 @@ export default function Step3InterviewArchitect({
         {gate && <AIQualityBadge gate={gate} showScores />}
       </div>
 
-      {!hasOutput && !isRunning && isEditor && (
+      {isEditor && !isRunning && (
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1.5">{t('step3.stakeholder_roles')}</label>
             <input
               type="text"
               value={stakeholderRoles}
-              onChange={(e) => setStakeholderRoles(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStakeholderRoles(e.target.value)}
               placeholder={t('step3.stakeholder_placeholder')}
               className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
-          <button
-            onClick={handleTrigger}
-            disabled={isAdvancing}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60 transition-colors"
-          >
-            {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            {t('step3.trigger')}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleTrigger}
+              disabled={isAdvancing}
+              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60 transition-colors"
+            >
+              {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              {hasOutput ? t('common.rerun_ai') : t('step3.trigger')}
+            </button>
+            {hasOutput && (
+              <span className="text-xs text-muted-foreground italic">
+                {t('common.rerun_hint')}
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -145,28 +188,37 @@ export default function Step3InterviewArchitect({
                   origin={question.origin}
                   canEdit={isEditor}
                   onDelete={() => editor.deleteItem(question.id)}
-                  onReprocess={() => reprocessHook.reprocess({
-                    step_type: WorkflowStep.INTERVIEW_ARCHITECT,
-                    item_type: 'question',
-                    item_id: question.id,
-                  })}
-                  isReprocessing={reprocessHook.isReprocessing[question.id]}
-                  editChildren={
-                    <QuestionEditForm
-                      question={question}
-                      onChange={(patch) => editor.updateItem(question.id, patch)}
-                    />
-                  }
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="shrink-0 text-xs text-muted-foreground font-mono pt-0.5">Q{idx + 1}</span>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{question.question}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{question.intent}</p>
-                      <span className="text-xs text-blue-600 mt-1 inline-block">{question.expected_answer_type}</span>
-                    </div>
-                  </div>
-                </EditableItem>
+              onReprocess={() => setOpenReprocessId(openReprocessId === question.id ? null : question.id)}
+              isReprocessing={!!reprocessHook.isReprocessing[question.id]}
+              editChildren={
+                <QuestionEditForm
+                  question={question}
+                  onChange={(patch) => editor.updateItem(question.id, patch)}
+                />
+              }
+            >
+              <div className="flex items-start gap-3">
+                <span className="shrink-0 text-xs text-muted-foreground font-mono pt-0.5">Q{idx + 1}</span>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{question.question}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{question.intent}</p>
+                  <span className="text-xs text-blue-600 mt-1 inline-block">{question.expected_answer_type}</span>
+                </div>
+              </div>
+
+              {openReprocessId === question.id && (
+                <div className="mt-4 pt-4 border-t border-muted">
+                  <ReprocessPanel
+                    itemId={question.id}
+                    isLoading={!!reprocessHook.isReprocessing[question.id]}
+                    revisedItem={(pendingRevisions[question.id] as any)?.item}
+                    onSubmit={(instruction) => void handleReprocessItem(question.id, instruction)}
+                    onAccept={() => handleAcceptRevision(question.id)}
+                    onReject={() => handleRejectRevision(question.id)}
+                  />
+                </div>
+              )}
+            </EditableItem>
               ))}
             </div>
           </div>
@@ -206,7 +258,7 @@ function QuestionEditForm({ question, onChange }: {
         <label className="block text-xs font-medium mb-1">Question</label>
         <textarea
           value={question.question}
-          onChange={(e) => onChange({ question: e.target.value })}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange({ question: e.target.value })}
           rows={2}
           className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
@@ -216,7 +268,7 @@ function QuestionEditForm({ question, onChange }: {
         <input
           type="text"
           value={question.intent}
-          onChange={(e) => onChange({ intent: e.target.value })}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ intent: e.target.value })}
           className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
@@ -224,7 +276,7 @@ function QuestionEditForm({ question, onChange }: {
         <label className="block text-xs font-medium mb-1">Expected Answer Type</label>
         <select
           value={question.expected_answer_type}
-          onChange={(e) => onChange({ expected_answer_type: e.target.value as InterviewQuestion['expected_answer_type'] })}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ expected_answer_type: e.target.value as InterviewQuestion['expected_answer_type'] })}
           className="rounded border px-2 py-1.5 text-sm"
         >
           <option value="qualitative">Qualitative</option>

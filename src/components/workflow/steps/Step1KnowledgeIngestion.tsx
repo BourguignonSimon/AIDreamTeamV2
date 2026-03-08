@@ -8,16 +8,15 @@
  * Spec: Section 3.3, FR-S1-01 through FR-S1-06
  */
 
-import { useRef, useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, FileText, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Loader2, Save, Trash2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { ConsultingProject, ProjectDocument, AnyWorkflowNode } from '@/lib/types';
 import { WorkflowStep } from '@/lib/types';
 import {
   MAX_FILE_SIZE_BYTES,
   MAX_FILES_PER_PROJECT,
-  ACCEPTED_DOCUMENT_EXTENSIONS,
 } from '@/lib/constants';
 import { formatFileSize } from '@/lib/utils';
 
@@ -46,10 +45,66 @@ export default function Step1KnowledgeIngestion({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [contextSummary, setContextSummary] = useState(project.context_summary ?? '');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [savingContext, setSavingContext] = useState(false);
 
   const step1Node = nodes.find(
     (n) => n.step_type === WorkflowStep.KNOWLEDGE_INGESTION && n.execution_status === 'completed'
   );
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const onDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    void handleFiles(e.dataTransfer.files);
+  };
+
+  /**
+   * FR-S1-06: Persist context summary changes.
+   * Updates project metadata and creates a new human_edit node if already completed.
+   */
+  const handleSaveContext = useCallback(async () => {
+    if (!isEditor) return;
+    setSavingContext(true);
+    setUploadError(null);
+
+    try {
+      // 1. Update project metadata
+      const { error: projectError } = await supabase
+        .from('consulting_projects')
+        .update({ context_summary: contextSummary })
+        .eq('id', project.id);
+
+      if (projectError) throw projectError;
+
+      // 2. If node exists, version it via human edit
+      if (step1Node) {
+        const currentOutput = (step1Node.output_data || {}) as Record<string, any>;
+        const { error: rpcError } = await supabase.rpc('insert_human_edit_node', {
+          p_project_id: project.id,
+          p_step_type: WorkflowStep.KNOWLEDGE_INGESTION,
+          p_input_data: { context_summary: contextSummary, language: project.language },
+          p_output_data: { 
+            ...currentOutput,
+            context_summary: contextSummary 
+          },
+          p_triggered_by: null,
+        });
+        if (rpcError) throw rpcError;
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Failed to save context');
+    } finally {
+      setSavingContext(false);
+    }
+  }, [contextSummary, project.id, project.language, step1Node, isEditor]);
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -139,28 +194,34 @@ export default function Step1KnowledgeIngestion({
 
       {/* Context Summary */}
       {isEditor && (
-        <div>
-          <label className="block text-sm font-medium mb-1.5">{t('step1.context_label')}</label>
-          <textarea
-            value={contextSummary}
-            onChange={(e) => setContextSummary(e.target.value)}
-            placeholder={t('step1.context_placeholder')}
-            rows={3}
-            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          />
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-1.5">{t('step1.context_label')}</label>
+            <textarea
+              value={contextSummary}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContextSummary(e.target.value)}
+              placeholder={t('step1.context_placeholder')}
+              rows={4}
+              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <button
+            onClick={() => void handleSaveContext()}
+            disabled={savingContext || contextSummary === project.context_summary}
+            className="flex items-center gap-2 rounded border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            {savingContext ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {savingContext ? t('common.saving') : t('step1.save_context')}
+          </button>
         </div>
       )}
 
       {/* Upload Area */}
       {isEditor && documents.length < MAX_FILES_PER_PROJECT && (
         <div
-          onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-          onDragLeave={() => setIsDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setIsDragOver(false);
-            void handleFiles(e.dataTransfer.files);
-          }}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
           onClick={() => fileInputRef.current?.click()}
           className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-10 cursor-pointer transition-colors ${
             isDragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
@@ -175,7 +236,7 @@ export default function Step1KnowledgeIngestion({
             className="hidden"
             multiple
             accept=".pdf,.docx,.txt"
-            onChange={(e) => void handleFiles(e.target.files)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => void handleFiles(e.target.files)}
           />
         </div>
       )}

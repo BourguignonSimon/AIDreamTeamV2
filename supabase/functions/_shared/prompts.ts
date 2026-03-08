@@ -23,6 +23,7 @@ export function buildHypothesisPrompt(params: {
   language: string;
   documentContent: string;
   contextSummary?: string;
+  domainContext?: string;
 }): AIPrompt {
   return {
     system: `You are a senior business operations analyst specializing in SME process improvement and automation readiness assessment. You analyze business documents to identify concrete operational bottlenecks that are candidates for AI and automation solutions.
@@ -55,6 +56,7 @@ QUALITY CONSTRAINTS:
 - Each bottleneck must cite specific evidence from the documents (evidence_basis field)
 - Do not generate generic bottlenecks (e.g., "lack of digital tools") — be specific to this SME
 - severity='high' requires clear business impact evidence
+${params.domainContext ? `\nDOMAIN SPECIFIC STEERAGE:\n${params.domainContext}` : ''}
 - Respond in ${params.language}`,
     messages: [
       {
@@ -79,6 +81,7 @@ export function buildInterviewPrompt(params: {
   language: string;
   stakeholderRoles: string[];
   bottlenecks: Array<{ id: string; title: string; description: string; severity: string }>;
+  domainContext?: string;
 }): AIPrompt {
   const bottleneckList = params.bottlenecks
     .map((b) => `- [${b.id}] ${b.title} (severity: ${b.severity}): ${b.description}`)
@@ -115,6 +118,7 @@ QUALITY CONSTRAINTS:
 - Minimum 2 questions per bottleneck, maximum 4
 - Questions must be open-ended and non-leading
 - Include at least one quantitative question per high-severity bottleneck
+${params.domainContext ? `\nDOMAIN SPECIFIC STEERAGE:\n${params.domainContext}` : ''}
 - Respond in ${params.language}`,
     messages: [
       {
@@ -135,6 +139,7 @@ export function buildGapAnalysisPrompt(params: {
   language: string;
   bottlenecks: Array<{ id: string; title: string; description: string; evidence_basis?: string }>;
   transcriptContent: string;
+  domainContext?: string;
 }): AIPrompt {
   const hypothesisList = params.bottlenecks
     .map((b) => `[${b.id}] ${b.title}: ${b.description}${b.evidence_basis ? ` (Original evidence: ${b.evidence_basis})` : ''}`)
@@ -177,6 +182,7 @@ QUALITY CONSTRAINTS:
 - Every gap_finding must have a non-empty evidence_quote
 - overall_alignment_score: 0-100 (0 = all hypotheses wrong, 100 = all confirmed)
 - new_bottlenecks follow the same schema as the original bottleneck objects
+${params.domainContext ? `\nDOMAIN SPECIFIC STEERAGE:\n${params.domainContext}` : ''}
 - Respond in ${params.language}`,
     messages: [
       {
@@ -209,6 +215,7 @@ export function buildSolutionsPrompt(params: {
     evidence_quote: string;
   }>;
   bottlenecks: Array<{ id: string; title: string; description: string }>;
+  domainContext?: string;
 }): AIPrompt {
   const confirmedFindings = params.gapFindings.filter((f) => f.confirmed || f.revised_severity !== 'eliminated');
   const findingsList = confirmedFindings
@@ -271,6 +278,7 @@ QUALITY CONSTRAINTS:
 - ROI assumptions must be explicit and specific (e.g., "Assumes €35/hour average labour cost")
 - Technology stack must be appropriate for an SME — no enterprise-only solutions
 - Payback period must account for implementation cost
+${params.domainContext ? `\nDOMAIN SPECIFIC STEERAGE:\n${params.domainContext}` : ''}
 - Respond in ${params.language}`,
     messages: [
       {
@@ -297,6 +305,7 @@ export function buildReportPrompt(params: {
   roadmap: Array<{ phase: number; title: string; duration_weeks: number }>;
   totalRoiEur: number;
   includeAppendix: boolean;
+  domainContext?: string;
 }): AIPrompt {
   const solutionList = params.solutions
     .map((s) => `- ${s.title}: ${s.description} (ROI: €${s.estimated_roi.cost_reduction_eur_per_year.toLocaleString()}/yr)`)
@@ -315,11 +324,20 @@ PREPARED BY: ${params.consultantName}
 OUTPUT FORMAT (respond ONLY with valid JSON):
 {
   "executive_summary": "3-4 paragraphs summarizing the engagement, key findings, and recommended approach. Professional, executive-level language.",
+  "methodology_note": "1-2 paragraphs explaining the data sources (interview, document analysis) and analysis methodology used to arrive at these recommendations.",
   "key_findings": [
     "Finding 1 as a complete sentence",
     "Finding 2 as a complete sentence"
   ],
   "solution_overview": "2-3 paragraphs providing a narrative overview of the recommended solutions and how they address the validated bottlenecks",
+  "roadmap_items": [
+    {
+      "id": "ri_[sequential_number]",
+      "title": "Short title of the roadmap item",
+      "timeline": "e.g. Weeks 1-4",
+      "expected_roi_eur": 5000
+    }
+  ],
   "detailed_roadmap_markdown": "Full implementation roadmap in Markdown format with phases, timelines, and dependencies",
   "total_roi_summary": {
     "total_cost_reduction_eur": ${params.totalRoiEur},
@@ -335,6 +353,7 @@ QUALITY CONSTRAINTS:
 - Key findings must be evidence-backed (reference interview data)
 - Roadmap markdown must include a timeline visualization
 - All monetary figures in EUR
+${params.domainContext ? `\nDOMAIN SPECIFIC STEERAGE:\n${params.domainContext}` : ''}
 - Respond entirely in ${params.language} — this is the client's language`,
     messages: [
       {

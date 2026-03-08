@@ -9,9 +9,10 @@
  * Spec: Section 3.3, FR-S6-01 through FR-S6-HEC-09
  */
 
-import { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, Plus, Loader2, TrendingUp, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Play, Loader2, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
+import type { ChangeEvent } from 'react';
 import type {
   ConsultingProject,
   AnyWorkflowNode,
@@ -29,6 +30,7 @@ import { useTargetedReprocess } from '@/hooks/useTargetedReprocess';
 import AIQualityBadge from '../AIQualityBadge';
 import EditableItem from '../editorial/EditableItem';
 import SaveEditBar from '../editorial/SaveEditBar';
+import ReprocessPanel from '../editorial/ReprocessPanel';
 
 interface Step6Props {
   project: ConsultingProject;
@@ -50,34 +52,75 @@ export default function Step6SolutionArchitect({
   const { t } = useTranslation();
   const { advance, isAdvancing } = usePipelineAdvance();
 
-  const activeNode = getActiveNode(nodes as AnyWorkflowNode[], WorkflowStep.SOLUTION_ARCHITECT);
+  const activeNode = getActiveNode(nodes, WorkflowStep.SOLUTION_ARCHITECT) as any;
   const gate = activeNode ? gates.find((g) => g.node_id === activeNode.id) : null;
 
   const editor = useStepEditor<Step6OutputData>(
     WorkflowStep.SOLUTION_ARCHITECT,
-    activeNode as AnyWorkflowNode | null
+    activeNode as import('@/lib/types').WorkflowNode<unknown, Step6OutputData> | null
   );
+  
   const reprocessHook = useTargetedReprocess(project.id, activeNode?.id ?? '');
+  const [openReprocessId, setOpenReprocessId] = useState<string | null>(null);
+  const [pendingRevisions, setPendingRevisions] = useState<Record<string, unknown>>({});
 
   const isRunning = stepStatus === 'running';
   const hasOutput = activeNode?.execution_status === 'completed' && editor.draft?.solutions;
 
   async function handleTrigger() {
-    await advance({ project_id: project.id, action: PIPELINE_ACTIONS.ARCHITECT_SOLUTIONS });
+    await advance({ project_id: project.id, action: PIPELINE_ACTIONS.GENERATE_SOLUTIONS });
+  }
+
+  async function handleReprocessItem(itemId: string, instruction?: string) {
+    setOpenReprocessId(itemId);
+    setPendingRevisions((prev: Record<string, unknown>) => ({ ...prev, [itemId]: undefined }));
+    
+    const result = await reprocessHook.reprocess({
+      step_type: WorkflowStep.SOLUTION_ARCHITECT,
+      item_type: 'solution',
+      item_id: itemId,
+      instruction,
+    });
+
+    if (result?.revised_item) {
+      setPendingRevisions((prev: Record<string, unknown>) => ({ ...prev, [itemId]: { ...result, item: result.revised_item } }));
+    }
+  }
+
+  function handleAcceptRevision(itemId: string) {
+    const revision = pendingRevisions[itemId] as { item: any, callId: string } | undefined;
+    if (revision) {
+      editor.applyReprocessResult(itemId, revision.item, revision.callId);
+    }
+    handleRejectRevision(itemId);
+  }
+
+  function handleRejectRevision(itemId: string) {
+    setPendingRevisions((prev: Record<string, unknown>) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
+    setOpenReprocessId(null);
   }
 
   const solutions = (editor.draft?.solutions ?? []) as AutomationSolution[];
 
   // FR-S6-HEC-09: Real-time total ROI across included solutions
-  const roiSummary = useMemo(() => {
-    const included = solutions.filter((s) => s.include_in_roadmap !== false);
-    const totalAnnualValue = included.reduce((acc, s) => acc + (s.estimated_annual_value_eur ?? 0), 0);
-    const totalEffortDays = included.reduce((acc, s) => acc + (s.implementation_effort_days ?? 0), 0);
-    return { count: included.length, totalAnnualValue, totalEffortDays };
+  const totalRoi = useMemo(() => {
+    return solutions
+      .filter((s) => s.included_in_roadmap !== false)
+      .reduce((acc, s) => acc + (s.estimated_roi?.cost_reduction_eur_per_year ?? 0), 0);
+  }, [solutions]);
+
+  const totalHours = useMemo(() => {
+    return solutions
+      .filter((s) => s.included_in_roadmap !== false)
+      .reduce((acc, s) => acc + (s.estimated_roi?.time_saved_hours_per_month ?? 0), 0);
   }, [solutions]);
 
   function handleToggleRoadmap(solutionId: string, current: boolean) {
-    editor.updateItem(solutionId, { include_in_roadmap: !current });
+    editor.updateItem(solutionId, { included_in_roadmap: !current });
   }
 
   return (
@@ -90,15 +133,22 @@ export default function Step6SolutionArchitect({
         {gate && <AIQualityBadge gate={gate} showScores />}
       </div>
 
-      {!hasOutput && !isRunning && isEditor && (
-        <button
-          onClick={handleTrigger}
-          disabled={isAdvancing}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60 transition-colors"
-        >
-          {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          {t('step6.trigger')}
-        </button>
+      {!isRunning && isEditor && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleTrigger}
+            disabled={isAdvancing}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60 transition-colors"
+          >
+            {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            {hasOutput ? t('common.rerun_ai') : t('step6.trigger')}
+          </button>
+          {hasOutput && (
+            <span className="text-xs text-muted-foreground italic">
+              {t('common.rerun_hint')}
+            </span>
+          )}
+        </div>
       )}
 
       {isRunning && (
@@ -114,20 +164,20 @@ export default function Step6SolutionArchitect({
           <div className="grid grid-cols-3 gap-4">
             <div className="rounded-lg border p-4 text-center">
               <p className="text-xs text-muted-foreground">{t('step6.solutions_included')}</p>
-              <p className="text-2xl font-bold mt-1">{roiSummary.count}</p>
+              <p className="text-2xl font-bold mt-1">{solutions.filter(s => s.included_in_roadmap !== false).length}</p>
               <p className="text-xs text-muted-foreground">of {solutions.length} total</p>
             </div>
             <div className="rounded-lg border p-4 text-center">
               <p className="text-xs text-muted-foreground">{t('step6.total_annual_value')}</p>
               <p className="text-2xl font-bold mt-1">
-                €{roiSummary.totalAnnualValue.toLocaleString()}
+                €{totalRoi.toLocaleString()}
               </p>
               <p className="text-xs text-muted-foreground">per year</p>
             </div>
             <div className="rounded-lg border p-4 text-center">
-              <p className="text-xs text-muted-foreground">{t('step6.total_effort')}</p>
-              <p className="text-2xl font-bold mt-1">{roiSummary.totalEffortDays}</p>
-              <p className="text-xs text-muted-foreground">person-days</p>
+              <p className="text-xs text-muted-foreground">{t('step6.total_time_saved')}</p>
+              <p className="text-2xl font-bold mt-1">{totalHours}</p>
+              <p className="text-xs text-muted-foreground">hours/month</p>
             </div>
           </div>
 
@@ -155,12 +205,14 @@ export default function Step6SolutionArchitect({
                       bottleneck_id: '',
                       title: '',
                       description: '',
-                      automation_type: 'rpa',
-                      complexity: 'medium',
-                      estimated_annual_value_eur: 0,
-                      implementation_effort_days: 0,
-                      priority_score: 50,
-                      include_in_roadmap: true,
+                      implementation_complexity: 'medium',
+                      estimated_roi: {
+                        cost_reduction_eur_per_year: 0,
+                        time_saved_hours_per_month: 0,
+                        payback_period_months: 0,
+                      },
+                      technology_stack: [],
+                      included_in_roadmap: true,
                       origin: 'human_added',
                     })
                   }
@@ -180,14 +232,8 @@ export default function Step6SolutionArchitect({
                   origin={solution.origin}
                   canEdit={isEditor}
                   onDelete={() => editor.deleteItem(solution.id)}
-                  onReprocess={() =>
-                    reprocessHook.reprocess({
-                      step_type: WorkflowStep.SOLUTION_ARCHITECT,
-                      item_type: 'solution',
-                      item_id: solution.id,
-                    })
-                  }
-                  isReprocessing={reprocessHook.isReprocessing[solution.id]}
+                  onReprocess={() => setOpenReprocessId(openReprocessId === solution.id ? null : solution.id)}
+                  isReprocessing={!!reprocessHook.isReprocessing[solution.id]}
                   editChildren={
                     <SolutionEditForm
                       solution={solution}
@@ -199,9 +245,22 @@ export default function Step6SolutionArchitect({
                     solution={solution}
                     isEditor={isEditor}
                     onToggleRoadmap={() =>
-                      handleToggleRoadmap(solution.id, solution.include_in_roadmap !== false)
+                      handleToggleRoadmap(solution.id, solution.included_in_roadmap !== false)
                     }
                   />
+
+                  {openReprocessId === solution.id && (
+                    <div className="mt-4 pt-4 border-t border-muted">
+                      <ReprocessPanel
+                        itemId={solution.id}
+                        isLoading={!!reprocessHook.isReprocessing[solution.id]}
+                        revisedItem={(pendingRevisions[solution.id] as any)?.item}
+                        onSubmit={(instruction) => void handleReprocessItem(solution.id, instruction)}
+                        onAccept={() => handleAcceptRevision(solution.id)}
+                        onReject={() => handleRejectRevision(solution.id)}
+                      />
+                    </div>
+                  )}
                 </EditableItem>
               ))}
             </div>
@@ -231,63 +290,74 @@ function SolutionView({
   isEditor: boolean;
   onToggleRoadmap: () => void;
 }) {
-  const complexityColor =
-    solution.complexity === 'high'
-      ? 'bg-red-50 text-red-700'
-      : solution.complexity === 'medium'
-      ? 'bg-amber-50 text-amber-700'
-      : 'bg-green-50 text-green-700';
-
   return (
-    <div className="space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="text-sm font-semibold">{solution.title || 'Untitled Solution'}</h4>
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${complexityColor}`}>
-              {solution.complexity}
-            </span>
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-              {solution.automation_type}
-            </span>
-          </div>
-          {solution.description && (
-            <p className="text-sm text-muted-foreground mt-1">{solution.description}</p>
-          )}
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h4 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+            {solution.title}
+          </h4>
+          <p className="text-sm text-muted-foreground mt-1">{solution.description}</p>
         </div>
+      </div>
 
-        {/* FR-S6-HEC-04: Roadmap toggle */}
-        {isEditor && (
-          <button
-            onClick={onToggleRoadmap}
-            title={solution.include_in_roadmap !== false ? 'Remove from roadmap' : 'Add to roadmap'}
-            className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+        <div className="bg-muted/30 rounded-lg p-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+            Value (Annual)
+          </p>
+          <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            €{solution.estimated_roi?.cost_reduction_eur_per_year?.toLocaleString()}
+          </p>
+        </div>
+        <div className="bg-muted/30 rounded-lg p-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+            Time Saved
+          </p>
+          <p className="text-sm font-medium">
+            {solution.estimated_roi?.time_saved_hours_per_month}h/mo
+          </p>
+        </div>
+        <div className="bg-muted/30 rounded-lg p-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+            Payback
+          </p>
+          <p className="text-sm font-medium">{solution.estimated_roi?.payback_period_months} mo</p>
+        </div>
+        <div className="bg-muted/30 rounded-lg p-3">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+            Complexity
+          </p>
+          <p className="text-sm font-medium capitalize">{solution.implementation_complexity}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {solution.technology_stack?.map((tech) => (
+          <span
+            key={tech}
+            className="px-2 py-0.5 rounded-full bg-primary/5 text-primary text-[10px] font-medium border border-primary/10"
           >
-            {solution.include_in_roadmap !== false ? (
-              <ToggleRight className="h-5 w-5 text-primary" />
-            ) : (
-              <ToggleLeft className="h-5 w-5" />
-            )}
-          </button>
-        )}
+            {tech}
+          </span>
+        ))}
       </div>
 
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <TrendingUp className="h-3 w-3 text-green-600" />
-          €{(solution.estimated_annual_value_eur ?? 0).toLocaleString()}/yr
-        </span>
-        <span>{solution.implementation_effort_days ?? 0} person-days</span>
-        <span>Priority: {solution.priority_score}/100</span>
-        {solution.include_in_roadmap === false && (
-          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-gray-500">Excluded from roadmap</span>
-        )}
-      </div>
-
-      {solution.consultant_annotation && (
-        <div className="rounded bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <span className="font-medium">Annotation: </span>
-          {solution.consultant_annotation}
+      {isEditor && (
+        <div className="flex items-center justify-between pt-2 border-t border-muted/50">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Include in Roadmap</span>
+            <button
+              onClick={onToggleRoadmap}
+              className="text-primary hover:text-primary-hover transition-colors"
+            >
+              {solution.included_in_roadmap !== false ? (
+                <ToggleRight className="w-8 h-8" />
+              ) : (
+                <ToggleLeft className="w-8 h-8 text-muted-foreground" />
+              )}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -302,74 +372,74 @@ function SolutionEditForm({
   onChange: (patch: Partial<AutomationSolution>) => void;
 }) {
   return (
-    <div className="space-y-3">
-      <div>
-        <label className="block text-xs font-medium mb-1">Title</label>
-        <input
-          type="text"
-          value={solution.title}
-          onChange={(e) => onChange({ title: e.target.value })}
-          className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-medium mb-1">Description</label>
-        <textarea
-          value={solution.description}
-          onChange={(e) => onChange({ description: e.target.value })}
-          rows={3}
-          className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium mb-1">Automation Type</label>
-          <select
-            value={solution.automation_type}
-            onChange={(e) =>
-              onChange({ automation_type: e.target.value as AutomationSolution['automation_type'] })
-            }
-            className="w-full rounded border px-2 py-1.5 text-sm"
-          >
-            <option value="rpa">RPA</option>
-            <option value="ai_ml">AI/ML</option>
-            <option value="integration">Integration</option>
-            <option value="workflow">Workflow</option>
-            <option value="other">Other</option>
-          </select>
+    <div className="space-y-4 pt-4 border-t border-muted/20">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground">Solution Title</label>
+          <input
+            type="text"
+            value={solution.title}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ title: e.target.value })}
+            className="w-full bg-muted/40 border-none rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none transition-all"
+          />
         </div>
-        <div>
-          <label className="block text-xs font-medium mb-1">Complexity</label>
-          <select
-            value={solution.complexity}
-            onChange={(e) =>
-              onChange({ complexity: e.target.value as AutomationSolution['complexity'] })
+
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground">Value (€/Year)</label>
+          <input
+            type="number"
+            value={solution.estimated_roi?.cost_reduction_eur_per_year ?? 0}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              onChange({
+                estimated_roi: {
+                  ...solution.estimated_roi!,
+                  cost_reduction_eur_per_year: Number(e.target.value),
+                },
+              })
             }
-            className="w-full rounded border px-2 py-1.5 text-sm"
+            className="w-full bg-muted/40 border-none rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none transition-all"
+          />
+        </div>
+
+        <div className="space-y-2 col-span-2">
+          <label className="text-xs font-medium text-muted-foreground">Description</label>
+          <textarea
+            value={solution.description}
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange({ description: e.target.value })}
+            rows={2}
+            className="w-full bg-muted/40 border-none rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none transition-all resize-none"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground">Complexity</label>
+          <select
+            value={solution.implementation_complexity}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+              onChange({ implementation_complexity: e.target.value as 'low' | 'medium' | 'high' })
+            }
+            className="w-full bg-muted/40 border-none rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none transition-all"
           >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
         </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium mb-1">Annual Value (EUR)</label>
+
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground">Payback (Months)</label>
           <input
             type="number"
-            value={solution.estimated_annual_value_eur ?? 0}
-            onChange={(e) => onChange({ estimated_annual_value_eur: Number(e.target.value) })}
-            className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium mb-1">Effort (person-days)</label>
-          <input
-            type="number"
-            value={solution.implementation_effort_days ?? 0}
-            onChange={(e) => onChange({ implementation_effort_days: Number(e.target.value) })}
-            className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            value={solution.estimated_roi?.payback_period_months ?? 0}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              onChange({
+                estimated_roi: {
+                  ...solution.estimated_roi!,
+                  payback_period_months: Number(e.target.value),
+                },
+              })
+            }
+            className="w-full bg-muted/40 border-none rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none transition-all"
           />
         </div>
       </div>
@@ -377,8 +447,7 @@ function SolutionEditForm({
         <label className="block text-xs font-medium mb-1">Consultant Annotation</label>
         <textarea
           value={solution.consultant_annotation ?? ''}
-          onChange={(e) => onChange({ consultant_annotation: e.target.value })}
-          rows={2}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange({ consultant_annotation: e.target.value })}
           placeholder="Add supplementary context for the report..."
           className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />

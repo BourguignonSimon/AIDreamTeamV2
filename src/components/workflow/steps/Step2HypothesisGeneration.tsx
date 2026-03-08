@@ -7,10 +7,11 @@
  * Spec: Section 3.3, FR-S2-01 through FR-S2-HEC-07
  */
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, Plus, Loader2 } from 'lucide-react';
+import { Play, Plus, Loader2, Save } from 'lucide-react';
 import type { ConsultingProject, AnyWorkflowNode, AIQualityGate, PipelineExecution, OperationalBottleneck, StepStatus } from '@/lib/types';
+import type { ChangeEvent } from 'react';
 import { WorkflowStep, getActiveNode } from '@/lib/types';
 import { PIPELINE_ACTIONS } from '@/lib/constants';
 import { usePipelineAdvance } from '@/hooks/usePipelineAdvance';
@@ -43,7 +44,7 @@ export default function Step2HypothesisGeneration({
   const { t } = useTranslation();
   const { advance, isAdvancing, advanceError } = usePipelineAdvance();
 
-  const activeNode = getActiveNode(nodes as AnyWorkflowNode[], WorkflowStep.HYPOTHESIS_GENERATION);
+  const activeNode = getActiveNode(nodes as AnyWorkflowNode[], WorkflowStep.HYPOTHESIS_GENERATION) as any;
   const gate = activeNode ? gates.find((g) => g.node_id === activeNode.id) : null;
 
   const editor = useStepEditor<Step2OutputData>(
@@ -52,8 +53,8 @@ export default function Step2HypothesisGeneration({
   );
 
   const reprocessHook = useTargetedReprocess(project.id, activeNode?.id ?? '');
-  const [reprocessingItemId, setReprocessingItemId] = useState<string | null>(null);
-  const [reprocessResult, setReprocessResult] = useState<{ itemId: string; callId: string; item: unknown } | null>(null);
+  const [openReprocessId, setOpenReprocessId] = useState<string | null>(null);
+  const [pendingRevisions, setPendingRevisions] = useState<Record<string, unknown>>({});
 
   const isRunning = stepStatus === 'running';
   const hasOutput = activeNode?.execution_status === 'completed' && editor.draft?.bottlenecks;
@@ -62,18 +63,37 @@ export default function Step2HypothesisGeneration({
     await advance({ project_id: project.id, action: PIPELINE_ACTIONS.GENERATE_HYPOTHESIS });
   }
 
-  async function handleReprocessItem(bottleneck: OperationalBottleneck) {
-    setReprocessingItemId(bottleneck.id);
-    try {
-      const result = await reprocessHook.reprocess({
-        step_type: WorkflowStep.HYPOTHESIS_GENERATION,
-        item_type: 'bottleneck',
-        item_id: bottleneck.id,
-      });
-      setReprocessResult({ itemId: bottleneck.id, callId: result.call_id, item: result.revised_item });
-    } finally {
-      setReprocessingItemId(null);
+  async function handleReprocessItem(itemId: string, instruction?: string) {
+    setOpenReprocessId(itemId);
+    setPendingRevisions((prev: Record<string, unknown>) => ({ ...prev, [itemId]: undefined }));
+    
+    const result = await reprocessHook.reprocess({
+      step_type: WorkflowStep.HYPOTHESIS_GENERATION,
+      item_type: 'bottleneck',
+      item_id: itemId,
+      instruction,
+    });
+
+    if (result?.revised_item) {
+      setPendingRevisions((prev: Record<string, unknown>) => ({ ...prev, [itemId]: { ...result, item: result.revised_item } }));
     }
+  }
+
+  function handleAcceptRevision(itemId: string) {
+    const revision = pendingRevisions[itemId] as { item: any, callId: string } | undefined;
+    if (revision) {
+      editor.applyReprocessResult(itemId, revision.item, revision.callId);
+    }
+    handleRejectRevision(itemId);
+  }
+
+  function handleRejectRevision(itemId: string) {
+    setPendingRevisions((prev: Record<string, unknown>) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
+    setOpenReprocessId(null);
   }
 
   async function handleOverrideGate(reason: string) {
@@ -98,15 +118,22 @@ export default function Step2HypothesisGeneration({
       </div>
 
       {/* Trigger button */}
-      {isEditor && !hasOutput && !isRunning && (
-        <button
-          onClick={handleTrigger}
-          disabled={isAdvancing}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60 transition-colors"
-        >
-          {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          {t('step2.trigger')}
-        </button>
+      {isEditor && !isRunning && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleTrigger}
+            disabled={isAdvancing}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60 transition-colors"
+          >
+            {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            {hasOutput ? t('common.rerun_ai') : t('step2.trigger')}
+          </button>
+          {hasOutput && (
+            <span className="text-xs text-muted-foreground italic">
+              {t('common.rerun_hint')}
+            </span>
+          )}
+        </div>
       )}
 
       {/* Running state */}
@@ -122,7 +149,19 @@ export default function Step2HypothesisGeneration({
 
       {/* Bottlenecks list */}
       {hasOutput && (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Executive Summary (Added for MRD Compliance) */}
+          <div className="rounded-lg border bg-slate-50 p-4">
+            <h3 className="text-sm font-semibold mb-2">{t('step2.executive_summary')}</h3>
+            <textarea
+              value={editor.draft.executive_summary || ''}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => editor.updateDraft({ executive_summary: e.target.value })}
+              rows={3}
+              className="w-full bg-white border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
+              placeholder={t('step2.summary_placeholder')}
+            />
+          </div>
+
           <div className="flex items-center justify-between">
             <h3 className="font-medium">{t('step2.bottlenecks')} ({bottlenecks.length})</h3>
             {isEditor && (
@@ -160,8 +199,8 @@ export default function Step2HypothesisGeneration({
               origin={bottleneck.origin}
               canEdit={isEditor}
               onDelete={() => editor.deleteItem(bottleneck.id)}
-              onReprocess={() => void handleReprocessItem(bottleneck)}
-              isReprocessing={reprocessingItemId === bottleneck.id}
+              onReprocess={() => setOpenReprocessId(openReprocessId === bottleneck.id ? null : bottleneck.id)}
+              isReprocessing={!!reprocessHook.isReprocessing[bottleneck.id]}
               editChildren={
                 <BottleneckEditForm
                   bottleneck={bottleneck}
@@ -170,27 +209,21 @@ export default function Step2HypothesisGeneration({
               }
             >
               <BottleneckView bottleneck={bottleneck} />
+              
+              {openReprocessId === bottleneck.id && (
+                <div className="mt-4 pt-4 border-t border-muted">
+                  <ReprocessPanel
+                    itemId={bottleneck.id}
+                    isLoading={!!reprocessHook.isReprocessing[bottleneck.id]}
+                    revisedItem={(pendingRevisions[bottleneck.id] as any)?.item}
+                    onSubmit={(instruction) => void handleReprocessItem(bottleneck.id, instruction)}
+                    onAccept={() => handleAcceptRevision(bottleneck.id)}
+                    onReject={() => handleRejectRevision(bottleneck.id)}
+                  />
+                </div>
+              )}
             </EditableItem>
           ))}
-
-          {/* Targeted reprocess result panel */}
-          {reprocessResult && (
-            <ReprocessPanel
-              itemId={reprocessResult.itemId}
-              isLoading={false}
-              revisedItem={reprocessResult.item}
-              onSubmit={() => {}}
-              onAccept={() => {
-                editor.applyReprocessResult(
-                  reprocessResult.itemId,
-                  reprocessResult.item,
-                  reprocessResult.callId
-                );
-                setReprocessResult(null);
-              }}
-              onReject={() => setReprocessResult(null)}
-            />
-          )}
         </div>
       )}
 
@@ -256,7 +289,7 @@ function BottleneckEditForm({
         <input
           type="text"
           value={bottleneck.title}
-          onChange={(e) => onChange({ title: e.target.value })}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ title: e.target.value })}
           className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
@@ -264,7 +297,7 @@ function BottleneckEditForm({
         <label className="block text-xs font-medium mb-1">Description</label>
         <textarea
           value={bottleneck.description}
-          onChange={(e) => onChange({ description: e.target.value })}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange({ description: e.target.value })}
           rows={3}
           className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
@@ -274,7 +307,7 @@ function BottleneckEditForm({
           <label className="block text-xs font-medium mb-1">Severity</label>
           <select
             value={bottleneck.severity}
-            onChange={(e) => onChange({ severity: e.target.value as 'low' | 'medium' | 'high' })}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ severity: e.target.value as 'low' | 'medium' | 'high' })}
             className="rounded border px-2 py-1.5 text-sm"
           >
             <option value="low">Low</option>
@@ -286,7 +319,7 @@ function BottleneckEditForm({
           <label className="block text-xs font-medium mb-1">Automation Potential</label>
           <select
             value={bottleneck.automation_potential}
-            onChange={(e) => onChange({ automation_potential: e.target.value as 'low' | 'medium' | 'high' })}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ automation_potential: e.target.value as 'low' | 'medium' | 'high' })}
             className="rounded border px-2 py-1.5 text-sm"
           >
             <option value="low">Low</option>

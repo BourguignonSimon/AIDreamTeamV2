@@ -308,7 +308,7 @@ Every Edge Function that writes to `workflow_nodes` must be idempotent. Re-deliv
 Quality evaluation is never in the critical path of a pipeline step. Steps complete based on AI call success alone. Quality scoring fires as a background process via a database event webhook, independent of step execution.
 
 **AR-05 — AI Provider Abstraction**  
-All AI calls are made through an `AIProvider` interface. The concrete implementation (Lovable AI Gateway) is injected at runtime. A fallback implementation (Anthropic Claude) is configured for automatic failover. No pipeline logic has any knowledge of which specific AI provider is active.
+All AI calls are made through an `AIProvider` interface. The concrete implementation (Google Gemini) is injected at runtime. A fallback implementation (Anthropic Claude) is configured for automatic failover. No pipeline logic has any knowledge of which specific AI provider is active.
 
 **AR-06 — Zero-Trust Data Access**  
 No Edge Function that processes AI calls shall hold the `SUPABASE_SERVICE_ROLE_KEY`. All AI-processing functions access the database via the `SUPABASE_ANON_KEY` plus RLS, or via scoped `SECURITY DEFINER` stored procedures. The service role key is restricted to storage operations exclusively.
@@ -349,7 +349,7 @@ Targeted re-processing of individual items (a single bottleneck, a single questi
 │          │                                                       │
 │          ├──► generate-hypothesis   ─┐                          │
 │          ├──► generate-interview    ─┤──► AI Provider Layer     │
-│          ├──► analyze-gaps          ─┤    (Lovable Gateway /    │
+│          ├──► analyze-gaps          ─┤    (Google Gemini /       │
 │          ├──► generate-solutions    ─┤     Anthropic Fallback)  │
 │          └──► generate-report       ─┘                          │
 │                                                                  │
@@ -841,11 +841,11 @@ export interface AIProvider {
 ```typescript
 // ai-provider/factory.ts
 export function createAIProvider(): AIProvider {
-  return new LovableGatewayProvider(Deno.env.get('LOVABLE_API_KEY')!);
+  return new GoogleGeminiProvider(Deno.env.get('GOOGLE_AI_API_KEY')!);
 }
 
 export function createFallbackProvider(): AIProvider {
-  return new AnthropicProvider(Deno.env.get('FALLBACK_ANTHROPIC_API_KEY')!);
+  return new AnthropicProvider(Deno.env.get('ANTHROPIC_API_KEY')!);
 }
 
 export async function callAIWithFallback(prompt: AIPrompt): Promise<AIResponse> {
@@ -1068,7 +1068,7 @@ If the total document token count exceeds `max_context_tokens`, the `generate-hy
 
 ### 7.3 Secrets Management
 
-**SEC-SECRET-01** All secrets (`LOVABLE_API_KEY`, `FALLBACK_ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) must be stored as Supabase Edge Function secrets. They must never appear in source code, `.env` files committed to version control, or client-side bundles.
+**SEC-SECRET-01** All secrets (`GOOGLE_AI_API_KEY`, `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) must be stored as Supabase Edge Function secrets. They must never appear in source code, `.env` files committed to version control, or client-side bundles.
 
 **SEC-SECRET-02** API keys must be rotated on a 90-day schedule. The rotation process must be documented and executable without downtime.
 
@@ -1658,8 +1658,8 @@ The React SPA must be deployed to a CDN-backed host (Vercel, Netlify, or Cloudfl
 |---|---|---|
 | `VITE_SUPABASE_URL` | Frontend `.env` | Supabase client |
 | `VITE_SUPABASE_ANON_KEY` | Frontend `.env` | Supabase client |
-| `LOVABLE_API_KEY` | Edge Function secrets | AI step functions |
-| `FALLBACK_ANTHROPIC_API_KEY` | Edge Function secrets | Fallback provider |
+| `GOOGLE_AI_API_KEY` | Edge Function secrets | AI step functions |
+| `ANTHROPIC_API_KEY` | Edge Function secrets | Fallback provider |
 | `SUPABASE_SERVICE_ROLE_KEY` | Edge Function secrets (storage-signer ONLY) | Signed URL generation |
 | `SUPABASE_URL` | Edge Function secrets | Internal function calls |
 | `SUPABASE_ANON_KEY` | Edge Function secrets | Scoped DB access in functions |
@@ -2002,7 +2002,7 @@ export interface ProjectCollaborator {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export interface ModelCallMetadata {
-  provider: 'lovable_gateway' | 'anthropic' | 'google' | 'openai';
+  provider: 'google' | 'anthropic' | 'openai';
   model_id: string;
   prompt_tokens: number;
   completion_tokens: number;
@@ -2277,7 +2277,7 @@ flowchart TD
     end
 
     subgraph AI["🤖 AI Provider Layer (Abstracted)"]
-        PRIMARY["Lovable AI Gateway\ngoogle/gemini-flash\n(primary)"]
+        PRIMARY["Google Gemini\ngemini-2.0-flash\n(primary)"]
         FALLBACK["Anthropic Claude\nclaud-haiku-4-5\n(auto-fallback)"]
     end
 

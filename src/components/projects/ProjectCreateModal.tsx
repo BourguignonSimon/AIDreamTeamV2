@@ -7,13 +7,13 @@
  * Spec: Section 3.1, FR-DASH-02, SG-06 (language selection)
  */
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { X, Loader2 } from 'lucide-react';
-import type { SupportedLanguage } from '@/lib/types';
+import type { SupportedLanguage, DomainTemplate } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 
 const schema = z.object({
@@ -21,6 +21,7 @@ const schema = z.object({
   client_name: z.string().max(120).optional(),
   industry_sector: z.string().max(80).optional(),
   language: z.enum(['fr', 'en', 'nl'] as const),
+  domain_template_id: z.string().uuid().optional().nullish(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -38,11 +39,32 @@ export default function ProjectCreateModal({ onClose, onCreated }: ProjectCreate
     register,
     handleSubmit,
     setError,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { language: 'fr' },
   });
+
+  const [templates, setTemplates] = useState<DomainTemplate[]>([]);
+  const selectedTemplateId = watch('domain_template_id');
+
+  useEffect(() => {
+    async function loadTemplates() {
+      const { data } = await supabase.from('domain_templates').select('*').order('name');
+      if (data) setTemplates(data);
+    }
+    void loadTemplates();
+  }, []);
+
+  // Auto-fill industry if template is selected
+  useEffect(() => {
+    if (selectedTemplateId) {
+      const tpl = templates.find(t => t.id === selectedTemplateId);
+      if (tpl?.industry) setValue('industry_sector', tpl.industry);
+    }
+  }, [selectedTemplateId, templates, setValue]);
 
   // Close on Escape key
   useEffect(() => {
@@ -65,8 +87,9 @@ export default function ProjectCreateModal({ onClose, onCreated }: ProjectCreate
       .insert({
         name: values.name,
         client_name: values.client_name || null,
-        industry_sector: values.industry_sector || null,
+        industry: values.industry_sector || null,
         language: values.language as SupportedLanguage,
+        domain_template_id: values.domain_template_id || null,
         owner_id: user.id,
       })
       .select('id')
@@ -140,6 +163,22 @@ export default function ProjectCreateModal({ onClose, onCreated }: ProjectCreate
               placeholder="e.g. Manufacturing, Logistics, Finance"
               className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Domain Template</label>
+            <select
+              {...register('domain_template_id')}
+              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">No specific template</option>
+              {templates.map(tpl => (
+                <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Select a domain-specific framework to steer the AI analysis.
+            </p>
           </div>
 
           <div>

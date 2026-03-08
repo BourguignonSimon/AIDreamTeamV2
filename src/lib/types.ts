@@ -60,8 +60,21 @@ export interface ConsultingProject {
   status: 'active' | 'archived' | 'completed';
   current_step: WorkflowStep;
   sme_profile: SMEProfile | null;
+  domain_template_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface DomainTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  industry: string | null;
+  focus_areas: string[] | null;
+  default_questions: string[] | null;
+  typical_bottlenecks: string[] | null;
+  prompt_injection_context: string | null;
+  created_at: string;
 }
 
 export interface ProjectDocument {
@@ -179,7 +192,7 @@ export interface ProjectCollaborator {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export interface ModelCallMetadata {
-  provider: 'lovable_gateway' | 'anthropic' | 'google' | 'openai';
+  provider: 'google' | 'anthropic' | 'openai';
   model_id: string;
   prompt_tokens: number;
   completion_tokens: number;
@@ -229,6 +242,8 @@ export interface AutomationSolution {
   estimated_roi: ROIEstimate;
   /** Whether this solution is included in the active roadmap (FR-S6-HEC-04) */
   included_in_roadmap: boolean;
+  /** Free-text note added by editor for the final report (FR-S6-HEC-08) */
+  consultant_annotation?: string;
   origin: ItemOrigin;
 }
 
@@ -283,12 +298,15 @@ export interface Step1OutputData {
   document_chunks: Array<{ path: string; chunk_count: number; token_count: number }>;
   total_tokens: number;
   ingestion_completed_at: string;
+  /** Mandatory context summary (FR-S1-06) */
+  context_summary?: string;
 }
 
 export interface Step2InputData { knowledge_node_id: string; }
 export interface Step2OutputData {
   bottlenecks: OperationalBottleneck[];
-  automation_candidates: string[];
+  executive_summary: string;
+  total_impact_score: number;
   model_metadata: ModelCallMetadata;
 }
 
@@ -336,6 +354,7 @@ export interface Step6InputData {
 }
 export interface Step6OutputData {
   solutions: AutomationSolution[];
+  executive_summary: string;
   total_estimated_roi_eur_per_year: number;
   implementation_roadmap: RoadmapPhase[];
   model_metadata: ModelCallMetadata;
@@ -345,11 +364,32 @@ export interface Step7InputData {
   solution_architect_node_id: string;
   report_config: ReportConfig;
 }
+
+/**
+ * A single item in the implementation roadmap (Step 7 report output).
+ * The `id` field is required for targeted AI reprocessing (FR-S7-HEC-02).
+ */
+export interface RoadmapItem {
+  /** Unique identifier — used as item_id in targeted-reprocess calls */
+  id?: string;
+  title: string;
+  timeline?: string;
+  expected_roi_eur?: number;
+  solution_id?: string;
+}
+
 export interface Step7OutputData {
   executive_summary: string;
   key_findings: string[];
   solution_overview: string;
   detailed_roadmap_markdown: string;
+  methodology_note?: string;
+  /** Roadmap items for display in the report (FR-S7-HEC-02: each may have an id for targeted reprocess) */
+  roadmap_items?: RoadmapItem[];
+  /** Storage path for the generated PDF in the 'report-exports' bucket */
+  report_storage_path?: string;
+  /** Optional human-authored closing note (FR-S7-HEC-06) */
+  closing_note?: string;
   /** Optional human-authored section (FR-S7-HEC-06) */
   consultant_commentary?: string;
   total_roi_summary: {
@@ -421,7 +461,14 @@ export interface UseStepEditorReturn<T> {
   isDirty: boolean;
   dirtyItems: Set<string>;
   isSaving: boolean;
+  /** Mutates an item inside an array field. For array-based steps (2, 3, 5, 6). */
   updateItem: (itemId: string, patch: Partial<unknown>) => void;
+  /**
+   * Patches top-level scalar fields directly onto the draft.
+   * Required for Step 7 report sections that are not array items.
+   * Uses sentinel dirty key '__root__' so isDirty stays truthful.
+   */
+  updateRoot: (patch: Partial<T>) => void;
   addItem: (newItem: unknown) => void;
   deleteItem: (itemId: string) => void;
   applyReprocessResult: (itemId: string, revisedItem: unknown, callId: string) => void;

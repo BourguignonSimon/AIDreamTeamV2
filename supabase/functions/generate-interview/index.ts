@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
     // 1. Fetch project metadata
     const { data: project } = await supabase
       .from('consulting_projects')
-      .select('client_name, industry, language')
+      .select('client_name, industry, language, domain_template:domain_template_id(*)')
       .eq('id', project_id)
       .single();
 
@@ -82,6 +82,7 @@ Deno.serve(async (req: Request) => {
       language: project.language,
       stakeholderRoles,
       bottlenecks: step2Output.bottlenecks,
+      domainContext: (project as any).domain_template?.prompt_injection_context ?? undefined,
     });
 
     // 5. Call AI

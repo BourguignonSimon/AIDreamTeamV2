@@ -1,7 +1,7 @@
 /**
  * Anthropic Claude Fallback Provider
  *
- * Automatic failover provider when the Lovable AI Gateway is unavailable.
+ * Automatic failover provider when the primary AI provider is unavailable.
  * Uses claude-haiku-4-5 for cost efficiency on fallback. (AR-05)
  * Specification: Section 6.2
  */

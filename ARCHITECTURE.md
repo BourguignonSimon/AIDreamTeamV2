@@ -41,6 +41,22 @@ Primary entity. Owned by one user; members via `project_collaborators`.
 | industry_sector | TEXT | |
 | language | TEXT | 'fr', 'en', 'nl' — AI content language |
 | current_step | TEXT | WorkflowStep enum value |
+| domain_template_id | UUID FK | Links to domain_templates |
+| created_at | TIMESTAMPTZ | |
+
+#### `domain_templates`
+Pre-defined industry contexts for AI steerage.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID PK | |
+| name | TEXT | |
+| description | TEXT | |
+| industry | TEXT | |
+| focus_areas | TEXT[] | |
+| typical_bottlenecks | JSONB | |
+| default_questions | JSONB | |
+| prompt_injection_context | TEXT | Injected into AI system prompts |
 | created_at | TIMESTAMPTZ | |
 
 #### `project_documents`
@@ -206,7 +222,7 @@ if (error || !user) return new Response('Unauthorized', { status: 401 });
 ```typescript
 // _shared/ai-provider/factory.ts
 export async function callAIWithFallback(prompt: AIPrompt): Promise<AIResponse> {
-  const primary = createAIProvider();   // LovableGateway (Gemini Flash)
+  const primary = createAIProvider();   // Google Gemini (Gemini Flash)
   try {
     return await primary.complete(prompt);
   } catch {
@@ -391,7 +407,11 @@ Quality gates are **advisory**, not blocking. Consultants can override any verdi
 │  │  Edge Functions (Deno runtime)       │   │
 │  │  pipeline-orchestrator               │   │
 │  │  generate-hypothesis                 │   │
-│  │  ... (9 total)                       │   │
+│  │  generate-interview                  │   │
+│  │  analyze-gaps                        │   │
+│  │  generate-solutions                  │   │
+│  │  generate-report                     │   │
+│  │  ... (11 total)                      │   │
 │  └──────────────────────────────────────┘   │
 │  ┌──────────┐  ┌──────────────────────────┐ │
 │  │PostgreSQL│  │ Storage                  │ │
@@ -402,8 +422,8 @@ Quality gates are **advisory**, not blocking. Consultants can override any verdi
                │
 ┌──────────────▼──────────────────────────────┐
 │            AI Providers (External)           │
-│  LovableGateway (Gemini Flash) — primary    │
-│  Anthropic (claude-haiku-4-5) — fallback    │
+│  Google Gemini (Direct REST API) — primary  │
+│  Anthropic (Direct REST API) — fallback     │
 └─────────────────────────────────────────────┘
 ```
 

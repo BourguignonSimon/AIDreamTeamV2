@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
     // 1. Fetch project metadata
     const { data: project } = await supabase
       .from('consulting_projects')
-      .select('client_name, industry, language')
+      .select('client_name, industry, language, domain_template:domain_template_id(*)')
       .eq('id', project_id)
       .single();
 
@@ -102,6 +102,7 @@ Deno.serve(async (req: Request) => {
       roadmap: step6Output.implementation_roadmap,
       totalRoiEur: step6Output.total_estimated_roi_eur_per_year,
       includeAppendix: report_config?.include_appendix ?? true,
+      domainContext: (project as any).domain_template?.prompt_injection_context ?? undefined,
     });
 
     const aiResponse = await callAIWithFallback(prompt);
@@ -118,8 +119,10 @@ Deno.serve(async (req: Request) => {
 
     const outputData = {
       executive_summary:          parsedOutput.executive_summary ?? '',
+      methodology_note:           parsedOutput.methodology_note ?? '',
       key_findings:               parsedOutput.key_findings ?? [],
       solution_overview:          parsedOutput.solution_overview ?? '',
+      roadmap_items:              parsedOutput.roadmap_items ?? [],
       detailed_roadmap_markdown:  parsedOutput.detailed_roadmap_markdown ?? '',
       total_roi_summary:          parsedOutput.total_roi_summary ?? {
         total_cost_reduction_eur:     step6Output.total_estimated_roi_eur_per_year,

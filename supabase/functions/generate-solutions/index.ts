@@ -41,7 +41,7 @@ Deno.serve(async (req: Request) => {
     // 1. Fetch project + SME profile
     const { data: project } = await supabase
       .from('consulting_projects')
-      .select('language, sme_profile, industry, country')
+      .select('language, sme_profile, industry, country, domain_template:domain_template_id(*)')
       .eq('id', project_id)
       .single();
 
@@ -93,6 +93,7 @@ Deno.serve(async (req: Request) => {
       smeProfile,
       gapFindings: step5Output.gap_findings,
       bottlenecks: step2Output?.bottlenecks ?? [],
+      domainContext: (project as any).domain_template?.prompt_injection_context ?? undefined,
     });
 
     const aiResponse = await callAIWithFallback(prompt);

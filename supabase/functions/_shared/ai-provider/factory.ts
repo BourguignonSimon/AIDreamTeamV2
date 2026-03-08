@@ -10,21 +10,21 @@
  */
 
 import type { AIPrompt, AIProvider, AIResponse } from './types.ts';
-import { LovableGatewayProvider } from './lovable.ts';
+import { GoogleGeminiProvider } from './google.ts';
 import { AnthropicProvider } from './anthropic.ts';
 
 export function createAIProvider(): AIProvider {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY');
+  const apiKey = Deno.env.get('GOOGLE_AI_API_KEY');
   if (!apiKey) {
-    throw new Error('LOVABLE_API_KEY environment variable is not set');
+    throw new Error('GOOGLE_AI_API_KEY environment variable is not set');
   }
-  return new LovableGatewayProvider(apiKey);
+  return new GoogleGeminiProvider(apiKey);
 }
 
 export function createFallbackProvider(): AIProvider {
-  const apiKey = Deno.env.get('FALLBACK_ANTHROPIC_API_KEY');
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!apiKey) {
-    throw new Error('FALLBACK_ANTHROPIC_API_KEY environment variable is not set');
+    throw new Error('ANTHROPIC_API_KEY environment variable is not set');
   }
   return new AnthropicProvider(apiKey);
 }

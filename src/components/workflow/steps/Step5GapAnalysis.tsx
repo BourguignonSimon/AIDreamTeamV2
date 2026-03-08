@@ -7,8 +7,9 @@
  * Spec: Section 3.3, FR-S5-01 through FR-S5-HEC-07
  */
 
+import React, { useState, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, Plus, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Play, Loader2, Plus, CheckCircle, XCircle } from 'lucide-react';
 import type { ConsultingProject, AnyWorkflowNode, AIQualityGate, PipelineExecution, GapFinding, StepStatus, Step5OutputData } from '@/lib/types';
 import { WorkflowStep, getActiveNode } from '@/lib/types';
 import { PIPELINE_ACTIONS } from '@/lib/constants';
@@ -18,6 +19,7 @@ import { useTargetedReprocess } from '@/hooks/useTargetedReprocess';
 import AIQualityBadge from '../AIQualityBadge';
 import EditableItem from '../editorial/EditableItem';
 import SaveEditBar from '../editorial/SaveEditBar';
+import ReprocessPanel from '../editorial/ReprocessPanel';
 
 interface Step5Props {
   project: ConsultingProject;
@@ -39,20 +41,56 @@ export default function Step5GapAnalysis({
   const { t } = useTranslation();
   const { advance, isAdvancing } = usePipelineAdvance();
 
-  const activeNode = getActiveNode(nodes as AnyWorkflowNode[], WorkflowStep.GAP_ANALYSIS);
+  const activeNode = getActiveNode(nodes, WorkflowStep.GAP_ANALYSIS) as any;
   const gate = activeNode ? gates.find((g) => g.node_id === activeNode.id) : null;
 
   const editor = useStepEditor<Step5OutputData>(
     WorkflowStep.GAP_ANALYSIS,
-    activeNode as AnyWorkflowNode | null
+    activeNode
   );
+  
   const reprocessHook = useTargetedReprocess(project.id, activeNode?.id ?? '');
+  const [openReprocessId, setOpenReprocessId] = useState<string | null>(null);
+  const [pendingRevisions, setPendingRevisions] = useState<Record<string, unknown>>({});
 
   const isRunning = stepStatus === 'running';
   const hasOutput = activeNode?.execution_status === 'completed' && editor.draft?.gap_findings;
 
   async function handleTrigger() {
     await advance({ project_id: project.id, action: PIPELINE_ACTIONS.ANALYZE_GAPS });
+  }
+
+  async function handleReprocessItem(itemId: string, instruction?: string) {
+    setOpenReprocessId(itemId);
+    setPendingRevisions((prev: Record<string, unknown>) => ({ ...prev, [itemId]: undefined }));
+    
+    const result = await reprocessHook.reprocess({
+      step_type: WorkflowStep.GAP_ANALYSIS,
+      item_type: 'gap_finding',
+      item_id: itemId,
+      instruction,
+    });
+
+    if (result?.revised_item) {
+      setPendingRevisions((prev: Record<string, unknown>) => ({ ...prev, [itemId]: { ...result, item: result.revised_item } }));
+    }
+  }
+
+  function handleAcceptRevision(itemId: string) {
+    const revision = pendingRevisions[itemId] as { item: any, callId: string } | undefined;
+    if (revision) {
+      editor.applyReprocessResult(itemId, revision.item, revision.callId);
+    }
+    handleRejectRevision(itemId);
+  }
+
+  function handleRejectRevision(itemId: string) {
+    setPendingRevisions((prev: Record<string, unknown>) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
+    setOpenReprocessId(null);
   }
 
   const findings = (editor.draft?.gap_findings ?? []) as GapFinding[];
@@ -68,15 +106,22 @@ export default function Step5GapAnalysis({
         {gate && <AIQualityBadge gate={gate} showScores />}
       </div>
 
-      {!hasOutput && !isRunning && isEditor && (
-        <button
-          onClick={handleTrigger}
-          disabled={isAdvancing}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60 transition-colors"
-        >
-          {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          {t('step5.trigger')}
-        </button>
+      {isEditor && !isRunning && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleTrigger}
+            disabled={isAdvancing}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-60 transition-colors"
+          >
+            {isAdvancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            {hasOutput ? t('common.rerun_ai') : t('step5.trigger')}
+          </button>
+          {hasOutput && (
+            <span className="text-xs text-muted-foreground italic">
+              {t('common.rerun_hint')}
+            </span>
+          )}
+        </div>
       )}
 
       {isRunning && (
@@ -136,12 +181,8 @@ export default function Step5GapAnalysis({
                   origin={finding.origin}
                   canEdit={isEditor}
                   onDelete={() => editor.deleteItem(finding.id)}
-                  onReprocess={() => reprocessHook.reprocess({
-                    step_type: WorkflowStep.GAP_ANALYSIS,
-                    item_type: 'gap_finding',
-                    item_id: finding.id,
-                  })}
-                  isReprocessing={reprocessHook.isReprocessing[finding.id]}
+                  onReprocess={() => setOpenReprocessId(openReprocessId === finding.id ? null : finding.id)}
+                  isReprocessing={!!reprocessHook.isReprocessing[finding.id]}
                   editChildren={
                     <GapFindingEditForm
                       finding={finding}
@@ -150,6 +191,19 @@ export default function Step5GapAnalysis({
                   }
                 >
                   <GapFindingView finding={finding} />
+                  
+                  {openReprocessId === finding.id && (
+                    <div className="mt-4 pt-4 border-t border-muted">
+                      <ReprocessPanel
+                        itemId={finding.id}
+                        isLoading={!!reprocessHook.isReprocessing[finding.id]}
+                        revisedItem={(pendingRevisions[finding.id] as any)?.item}
+                        onSubmit={(instruction) => void handleReprocessItem(finding.id, instruction)}
+                        onAccept={() => handleAcceptRevision(finding.id)}
+                        onReject={() => handleRejectRevision(finding.id)}
+                      />
+                    </div>
+                  )}
                 </EditableItem>
               ))}
             </div>
@@ -219,13 +273,13 @@ function GapFindingEditForm({ finding, onChange }: {
           <input
             type="checkbox"
             checked={finding.confirmed}
-            onChange={(e) => onChange({ confirmed: e.target.checked })}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ confirmed: e.target.checked })}
           />
           Confirmed
         </label>
         <select
           value={finding.revised_severity}
-          onChange={(e) => onChange({ revised_severity: e.target.value as GapFinding['revised_severity'] })}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ revised_severity: e.target.value as GapFinding['revised_severity'] })}
           className="rounded border px-2 py-1 text-sm"
         >
           <option value="low">Low</option>
@@ -238,7 +292,7 @@ function GapFindingEditForm({ finding, onChange }: {
         <label className="block text-xs font-medium mb-1">Evidence Quote</label>
         <textarea
           value={finding.evidence_quote}
-          onChange={(e) => onChange({ evidence_quote: e.target.value })}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange({ evidence_quote: e.target.value })}
           rows={2}
           className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
@@ -247,7 +301,7 @@ function GapFindingEditForm({ finding, onChange }: {
         <label className="block text-xs font-medium mb-1">Consultant Annotation</label>
         <textarea
           value={finding.consultant_annotation ?? ''}
-          onChange={(e) => onChange({ consultant_annotation: e.target.value })}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange({ consultant_annotation: e.target.value })}
           rows={2}
           placeholder="Add supplementary context for Step 6..."
           className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"

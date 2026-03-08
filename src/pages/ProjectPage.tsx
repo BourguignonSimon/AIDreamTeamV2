@@ -65,7 +65,7 @@ export default function ProjectPage() {
       // Load project
       const { data: proj, error: projErr } = await supabase
         .from('consulting_projects')
-        .select('*')
+        .select('*, domain_template:domain_template_id(name)')
         .eq('id', projectId)
         .single();
 
@@ -175,7 +175,19 @@ export default function ProjectPage() {
     <div className="min-h-screen flex flex-col bg-muted/10">
       <AppHeader
         title={project.name}
-        subtitle={project.client_name ?? undefined}
+        subtitle={
+          <div className="flex items-center gap-2">
+            <span>{project.client_name}</span>
+            {(project as any).domain_template?.name && (
+              <>
+                <span className="text-muted-foreground/30">•</span>
+                <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary uppercase tracking-wider">
+                  {(project as any).domain_template.name}
+                </span>
+              </>
+            )}
+          </div>
+        }
         actions={
           <div className="flex items-center gap-2">
             <button

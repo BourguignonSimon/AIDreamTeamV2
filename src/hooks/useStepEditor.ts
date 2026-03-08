@@ -14,6 +14,12 @@
  * - Make any Supabase calls other than via save-human-edit on save()
  * - Contain any presentation logic
  * - Be shared across multiple steps (one instance per mounted step panel)
+ *
+ * updateItem(itemId, patch) — mutates an item inside an array field (Steps 2/3/5/6)
+ * updateRoot(patch)         — patches top-level scalar fields directly (Step 7)
+ *
+ * The sentinel dirty key '__root__' is used when updateRoot is called so that
+ * isDirty and dirtyItems.size remain truthful for the Save bar.
  */
 
 import { useState, useCallback } from 'react';
@@ -21,9 +27,9 @@ import { supabase } from '@/lib/supabase';
 import { deepClone } from '@/lib/utils';
 import type { WorkflowNode, WorkflowStep, UseStepEditorReturn } from '@/lib/types';
 
-export function useStepEditor<T extends Record<string, unknown>>(
+export function useStepEditor<T extends object>(
   stepType: WorkflowStep,
-  activeNode: WorkflowNode<Record<string, unknown>, T> | null
+  activeNode: WorkflowNode<unknown, T> | null
 ): UseStepEditorReturn<T> {
   const [draft, setDraft] = useState<T>(() =>
     deepClone(activeNode?.output_data ?? ({} as T))
@@ -37,6 +43,7 @@ export function useStepEditor<T extends Record<string, unknown>>(
   /**
    * Merges a partial update into the draft for one item.
    * The item must be in an array field within output_data.
+   * Do NOT call with itemId = 'root' — use updateRoot() instead.
    */
   const updateItem = useCallback((itemId: string, patch: Partial<unknown>) => {
     setDraft((prev) => {
@@ -60,7 +67,25 @@ export function useStepEditor<T extends Record<string, unknown>>(
       }
       return updated;
     });
-    setDirtyItems((prev) => new Set(prev).add(itemId));
+    setDirtyItems((prev: Set<string>) => new Set(prev).add(itemId));
+  }, []);
+
+  /**
+   * Patches top-level scalar fields directly onto the draft.
+   * Required for Step 7 report sections (executive_summary, methodology_note,
+   * closing_note, etc.) which are not array items and therefore cannot be
+   * targeted by updateItem.
+   *
+   * Uses the sentinel dirty key '__root__' so that isDirty stays truthful.
+   *
+   * @example editor.updateRoot({ executive_summary: newText })
+   */
+  const updateRoot = useCallback((patch: Partial<T>) => {
+    setDraft((prev) => ({
+      ...deepClone(prev),
+      ...patch,
+    }));
+    setDirtyItems((prev: Set<string>) => new Set(prev).add('__root__'));
   }, []);
 
   /**
@@ -83,7 +108,7 @@ export function useStepEditor<T extends Record<string, unknown>>(
     });
 
     const itemId = (item.id as string) ?? crypto.randomUUID();
-    setDirtyItems((prev) => new Set(prev).add(itemId));
+    setDirtyItems((prev: Set<string>) => new Set(prev).add(itemId));
   }, []);
 
   /**
@@ -106,7 +131,7 @@ export function useStepEditor<T extends Record<string, unknown>>(
       }
       return updated;
     });
-    setDirtyItems((prev) => {
+    setDirtyItems((prev: Set<string>) => {
       const next = new Set(prev);
       next.add(`deleted:${itemId}`);
       return next;
@@ -120,7 +145,7 @@ export function useStepEditor<T extends Record<string, unknown>>(
   const applyReprocessResult = useCallback(
     (itemId: string, revisedItem: unknown, callId: string) => {
       updateItem(itemId, revisedItem as Partial<unknown>);
-      setPendingCallIds((prev) => [...prev, callId]);
+      setPendingCallIds((prev: string[]) => [...prev, callId]);
     },
     [updateItem]
   );
@@ -172,6 +197,7 @@ export function useStepEditor<T extends Record<string, unknown>>(
     dirtyItems,
     isSaving,
     updateItem,
+    updateRoot,
     addItem,
     deleteItem,
     applyReprocessResult,

@@ -54,7 +54,8 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full system architecture docume
 **Stack:**
 - **Frontend**: React 18 + TypeScript (strict) + Vite + Tailwind CSS + shadcn/ui
 - **Backend**: Supabase (PostgreSQL 15+, Edge Functions on Deno, Auth, Storage, Realtime)
-- **AI**: Google Gemini Flash (primary) via LovableGateway + Anthropic Claude Haiku (fallback)
+- **AI**: Google Gemini (Gemini Flash) — primary
+  Anthropic (claude-haiku-4-5) — fallback
 - **i18n**: react-i18next — French, English, Dutch
 
 ---
@@ -103,10 +104,8 @@ VITE_SUPABASE_ANON_KEY=<anon-key>
 **Edge Function secrets** (set via `supabase secrets set`):
 
 ```
-LOVABLE_GATEWAY_API_KEY=<key>
+GOOGLE_GEMINI_API_KEY=<key>
 ANTHROPIC_API_KEY=<key>
-SUPABASE_SERVICE_ROLE_KEY=<key>   # storage-signer function ONLY
-PG_NET_URL=<internal>             # quality gate async trigger
 ```
 
 ---
@@ -119,14 +118,41 @@ Migrations are in `supabase/migrations/` and run in order:
 |------|-------------|
 | `001_extensions.sql` | pg_net, pgcrypto, uuid-ossp extensions |
 | `002_tables.sql` | All 7 core tables with RLS enabled |
-| `003_storage.sql` | Buckets: project-documents, report-exports |
+| `003_views.sql` | `active_workflow_nodes` convenience view |
 | `004_functions.sql` | insert_workflow_node, insert_human_edit_node, is_project_member, is_project_editor RPCs |
 | `005_rls.sql` | Row Level Security policies for all tables |
+| `006_realtime.sql` | Realtime publication for live UI subscriptions |
+| `007_storage.sql` | Buckets: project-documents, report-exports |
+| `008_app_settings.sql` | **Required post-install:** database-level `app.edge_function_url` and `app.supabase_anon_key` settings for pg_net async calls |
+| `009_domain_templates.sql` | Industry-specific steerage: default templates for ERP, Logistics, and HR automation |
 
 Apply all:
 ```bash
 supabase db push
 ```
+
+### Post-deploy: configure runtime settings
+
+After `supabase db push`, the pg_net call inside `insert_workflow_node` needs
+two database-level settings to fire correctly. Run this **once** in the Supabase
+SQL Editor (or via `psql`):
+
+```sql
+SELECT set_app_runtime_config(
+  p_edge_function_url := 'https://<project-ref>.supabase.co/functions/v1',
+  p_supabase_anon_key := '<your-anon-key>'
+);
+```
+
+For local development:
+```sql
+SELECT set_app_runtime_config(
+  p_edge_function_url := 'http://localhost:54321/functions/v1',
+  p_supabase_anon_key := '<local-anon-key from supabase status>'
+);
+```
+
+You can re-run this at any time to update values (e.g. after a key rotation).
 
 ### Key Design Decisions
 
@@ -144,21 +170,22 @@ Located in `supabase/functions/`. Each function is a Deno module.
 |----------|-------------|
 | `pipeline-orchestrator` | Validates auth, prevents double-trigger, dispatches step functions |
 | `generate-hypothesis` | Step 2: reads documents, calls AI, writes node |
-| `architect-interviews` | Step 3: builds interview question set from hypotheses |
+| `generate-interview` | Step 3: builds interview question set from hypotheses |
+| `generate-interview` | Step 4: Human Breakpoint helper functions |
 | `analyze-gaps` | Step 5: cross-references interview transcript with hypotheses |
-| `architect-solutions` | Step 6: generates automation solutions with ROI |
+| `generate-solutions` | Step 6: generates automation solutions with ROI |
 | `generate-report` | Step 7: assembles and stores PDF report |
 | `targeted-reprocess` | Scoped AI reprocess of a single item (Amendment OPERIA-AMD-001) |
 | `save-human-edit` | Writes human-edit node version, marks applied reprocess calls |
 | `evaluate-output` | Async quality gate: scores AI output 0–100 |
 | `storage-signer` | Creates signed download URLs (only function with SERVICE_ROLE_KEY) |
-| `invite-collaborator` | Sends email invitation, creates pending collaborator record |
+| `health-check` | **Installation verification:** checks secrets, Gemini connectivity, pg_net, and bucket config. No auth required. |
 
 ### Shared modules (`_shared/`)
 
 | Module | Description |
 |--------|-------------|
-| `ai-provider/factory.ts` | `callAIWithFallback` — primary LovableGateway + Anthropic fallback |
+| `ai-provider/factory.ts` | `callAIWithFallback` — primary Google Gemini + Anthropic fallback |
 | `sanitize.ts` | Prompt injection mitigation, XML wrapping, token budget utilities |
 | `prompts.ts` | All step-specific prompt builders with JSON output schemas |
 | `supabase.ts` | Supabase client factory (anon for regular, service-role for storage-signer only) |
@@ -227,6 +254,37 @@ E2E tests: `e2e/` directory.
 
 ---
 
+## Post-Deploy Verification
+
+After deploying, run the health check to confirm all prerequisites are met:
+
+```bash
+curl https://<project-ref>.supabase.co/functions/v1/health-check
+```
+
+Expected healthy response:
+```json
+{
+  "healthy": true,
+  "checks": {
+    "env_vars":            { "ok": true, "detail": "GOOGLE_GEMINI_API_KEY ✓  ANTHROPIC_API_KEY ✓" },
+    "gemini_connectivity": { "ok": true, "detail": "Gemini responded in < 8 s" },
+    "anthropic_key":       { "ok": true, "detail": "Anthropic API key valid and reachable" },
+    "database_config":     { "ok": true, "detail": "pg_net ✓  edge_function_url ✓  anon_key ✓  buckets ✓" }
+  },
+  "summary": "4/4 checks passed"
+}
+```
+
+Or use the SQL view directly:
+```sql
+SELECT * FROM app_health_check;
+```
+
+All boolean columns should be `true`.
+
+---
+
 ## Deployment
 
 ### Supabase (production)
@@ -236,7 +294,19 @@ supabase db push --linked
 supabase functions deploy --project-ref <ref>
 ```
 
-### Frontend (Vercel / Netlify)
+### Configure runtime settings (required, one-time)
+
+```sql
+SELECT set_app_runtime_config(
+  p_edge_function_url := 'https://<project-ref>.supabase.co/functions/v1',
+  p_supabase_anon_key := '<your-anon-key>'
+);
+```
+
+### Verify
+```bash
+curl https://<project-ref>.supabase.co/functions/v1/health-check
+```
 
 ```bash
 npm run build
