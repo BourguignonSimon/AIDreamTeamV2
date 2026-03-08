@@ -45,12 +45,8 @@ export default function ProjectPage() {
   const [activeStep, setActiveStep] = useState<WorkflowStep>(WorkflowStep.KNOWLEDGE_INGESTION);
   const [showSettings, setShowSettings] = useState(false);
 
-  const { state: workflowState } = useWorkflowState(projectId ?? '');
-  const stepStatuses = useStepGating(
-    workflowState.nodes,
-    workflowState.gates,
-    workflowState.executions
-  );
+  const workflowState = useWorkflowState(projectId ?? '');
+  const { stepStatuses } = useStepGating(workflowState.nodes, workflowState.gates);
 
   const isEditor = userRole === 'owner' || userRole === 'editor';
 
@@ -80,8 +76,17 @@ export default function ProjectPage() {
         .eq('user_id', user.id)
         .single();
 
-      if (!collab) { navigate('/'); return; } // Not a member — deny access
-      setUserRole(collab.role as 'owner' | 'editor' | 'viewer');
+      // Grant owner access even if no collaborator row exists for them
+      if (!collab) {
+        if (proj.owner_id === user.id) {
+          setUserRole('owner');
+        } else {
+          navigate('/'); // Not a member — deny access
+          return;
+        }
+      } else {
+        setUserRole(collab.role as 'owner' | 'editor' | 'viewer');
+      }
 
       // Set active step to project's current step
       if (proj.current_step) {
@@ -109,9 +114,11 @@ export default function ProjectPage() {
         return (
           <Step1KnowledgeIngestion
             {...commonProps}
+            documents={workflowState.documents}
             stepStatus={stepStatuses[WorkflowStep.KNOWLEDGE_INGESTION]}
             onDocumentAdded={workflowState.addDocument}
             onDocumentRemoved={workflowState.removeDocument}
+            onCompleted={() => setActiveStep(WorkflowStep.HYPOTHESIS_GENERATION)}
           />
         );
       case WorkflowStep.HYPOTHESIS_GENERATION:
@@ -133,6 +140,7 @@ export default function ProjectPage() {
           <Step4HumanBreakpoint
             {...commonProps}
             stepStatus={stepStatuses[WorkflowStep.HUMAN_BREAKPOINT]}
+            onSubmitted={() => setActiveStep(WorkflowStep.GAP_ANALYSIS)}
           />
         );
       case WorkflowStep.GAP_ANALYSIS:

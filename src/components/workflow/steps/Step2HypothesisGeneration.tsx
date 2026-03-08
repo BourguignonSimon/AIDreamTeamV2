@@ -80,9 +80,9 @@ export default function Step2HypothesisGeneration({
   }
 
   function handleAcceptRevision(itemId: string) {
-    const revision = pendingRevisions[itemId] as { item: any, callId: string } | undefined;
+    const revision = pendingRevisions[itemId] as { item: any, call_id: string } | undefined;
     if (revision) {
-      editor.applyReprocessResult(itemId, revision.item, revision.callId);
+      editor.applyReprocessResult(itemId, revision.item, revision.call_id);
     }
     handleRejectRevision(itemId);
   }
@@ -155,7 +155,7 @@ export default function Step2HypothesisGeneration({
             <h3 className="text-sm font-semibold mb-2">{t('step2.executive_summary')}</h3>
             <textarea
               value={editor.draft.executive_summary || ''}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => editor.updateDraft({ executive_summary: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => editor.updateRoot({ executive_summary: e.target.value })}
               rows={3}
               className="w-full bg-white border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
               placeholder={t('step2.summary_placeholder')}

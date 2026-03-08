@@ -31,15 +31,33 @@ export function createUserClient(authHeader: string | null) {
 }
 
 /**
- * Creates a Supabase client using the anon key without user context.
- * Used by internal step functions triggered by pipeline_executions events.
- * The SECURITY DEFINER RPCs (insert_workflow_node) handle authorization internally.
+ * Creates a Supabase client using the service role key (bypasses RLS).
+ * Used by internal step functions invoked server-to-server by the pipeline
+ * orchestrator. These functions never run in a browser context and have no
+ * user JWT to forward — they need to read workflow_nodes, consulting_projects,
+ * project_documents and update pipeline_executions, all of which are
+ * RLS-protected. The service role key is the correct credential here.
+ *
+ * Falls back to the anon key only in local development where the service role
+ * key may not be configured, so `supabase functions serve` still works.
+ *
+ * DO NOT use this in functions that receive and should honour a user JWT —
+ * use createUserClient() instead so RLS is respected for end-user requests.
  */
 export function createServiceClient() {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const fallbackKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  if (!serviceRoleKey) {
+    console.warn(
+      '[supabase] SUPABASE_SERVICE_ROLE_KEY not set — falling back to anon key. ' +
+      'RLS will block DB reads in step functions unless policies allow anon access. ' +
+      'Set the secret via: supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<key>'
+    );
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey ?? fallbackKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
