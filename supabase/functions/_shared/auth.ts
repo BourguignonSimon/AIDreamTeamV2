@@ -48,13 +48,30 @@ export class AuthError extends Error {
 }
 
 /**
- * Standard CORS headers for Edge Functions that accept browser requests.
+ * Returns CORS headers for Edge Functions that accept browser requests.
+ *
+ * SEC-01: In production, only origins listed in the ALLOWED_ORIGINS env var
+ * (comma-separated) are reflected back. Falls back to '*' only when the env
+ * var is not set (local dev). 'Vary: Origin' prevents CDN caching collisions.
  */
-export function corsHeaders(origin?: string) {
+export function corsHeaders(requestOrigin?: string) {
+  const allowedOriginsEnv = Deno.env.get('ALLOWED_ORIGINS');
+
+  let allowOrigin: string;
+  if (!allowedOriginsEnv) {
+    // Local dev: no allowlist configured — open wildcard
+    allowOrigin = '*';
+  } else {
+    const allowlist = allowedOriginsEnv.split(',').map((o) => o.trim()).filter(Boolean);
+    allowOrigin =
+      requestOrigin && allowlist.includes(requestOrigin) ? requestOrigin : allowlist[0] ?? '*';
+  }
+
   return {
-    'Access-Control-Allow-Origin': origin ?? '*',
+    'Access-Control-Allow-Origin':  allowOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+    'Vary': 'Origin',
   };
 }
 
@@ -63,7 +80,9 @@ export function corsHeaders(origin?: string) {
  */
 export function handleCORS(req: Request): Response | null {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders() });
+    return new Response('ok', {
+      headers: corsHeaders(req.headers.get('Origin') ?? undefined),
+    });
   }
   return null;
 }

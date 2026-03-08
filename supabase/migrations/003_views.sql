@@ -13,7 +13,9 @@ SELECT DISTINCT ON (project_id, step_type)
 FROM workflow_nodes wn
 WHERE execution_status = 'completed'
   AND superseded_by IS NULL
-ORDER BY project_id, step_type, version DESC;
+-- ROB-03: Secondary sort by created_at DESC makes the result deterministic when
+-- version numbers are equal (edge case), satisfying DISTINCT ON ordering requirements.
+ORDER BY project_id, step_type, version DESC, created_at DESC;
 
 COMMENT ON VIEW active_workflow_nodes IS
   'Returns the current canonical workflow node per (project, step) pair.

@@ -40,6 +40,11 @@ const STEP_PREREQUISITES: Record<string, string | null> = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
+// ROB-02: Internal function-to-function calls use the service role key so that
+// step functions can write directly to tables without RLS contention. Falls back
+// to the anon key if the service role key is not set (local dev without secrets).
+const INTERNAL_INVOKE_KEY =
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? SUPABASE_ANON_KEY;
 
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
@@ -146,7 +151,7 @@ Deno.serve(async (req: Request) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${INTERNAL_INVOKE_KEY}`,
           },
           body: JSON.stringify({
             execution_id: execution.id,

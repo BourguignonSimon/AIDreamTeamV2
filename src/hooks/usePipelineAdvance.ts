@@ -42,7 +42,7 @@ export function usePipelineAdvance(): UsePipelineAdvanceReturn {
         body: {
           project_id: params.project_id,
           action: params.action,
-          ...params.metadata,
+          payload: params.metadata ?? null,
         },
       });
 

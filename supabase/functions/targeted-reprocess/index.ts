@@ -34,7 +34,9 @@ Deno.serve(async (req: Request) => {
     const user = await verifyJWT(req);
     const body = await req.json() as ReprocessRequest;
 
-    const { project_id, source_node_id, step_type, item_type, item_id, instruction } = body;
+    const { project_id, source_node_id, step_type, item_type, item_id } = body;
+    // SEC-02: Sanitize the free-text instruction before interpolating into AI prompt
+    const instruction = body.instruction ? sanitizeInstruction(body.instruction) : undefined;
 
     if (!project_id || !source_node_id || !step_type || !item_type || !item_id) {
       return errorResponse('project_id, source_node_id, step_type, item_type, and item_id are required', 400);
@@ -304,4 +306,17 @@ Return the revised section text in ${params.context.language ?? 'English'}.`,
   };
 
   return prompts[params.item_type];
+}
+
+/**
+ * SEC-02: Sanitizes a free-text instruction before it is interpolated into an AI prompt.
+ * Strips HTML/XML tags, removes non-printable characters, and hard-caps at 500 chars
+ * to prevent prompt injection via the instruction field.
+ */
+function sanitizeInstruction(raw: string): string {
+  return raw
+    .replace(/<[^>]*>/g, '')          // strip HTML/XML tags
+    .replace(/[^\x20-\x7E\u00A0-\uFFFF]/g, '') // remove non-printable ASCII
+    .trim()
+    .slice(0, 500);
 }

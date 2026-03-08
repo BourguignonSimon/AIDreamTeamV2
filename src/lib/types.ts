@@ -472,7 +472,8 @@ export interface UseStepEditorReturn<T> {
   addItem: (newItem: unknown) => void;
   deleteItem: (itemId: string) => void;
   applyReprocessResult: (itemId: string, revisedItem: unknown, callId: string) => void;
-  save: () => Promise<{ node_id: string }>;
+  /** Optional human_overrides for Step 7 section-level overrides (BUG-04) */
+  save: (human_overrides?: Record<string, string>) => Promise<{ node_id: string }>;
   discard: () => void;
 }
 

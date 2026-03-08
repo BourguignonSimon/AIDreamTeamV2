@@ -95,7 +95,12 @@ DECLARE
   v_node_id UUID;
   v_version INTEGER;
 BEGIN
-  -- Idempotency guard: return existing node ID if already processed (AR-02)
+  -- ROB-01: Serialise concurrent calls for the same (project, step) pair at the
+  -- transaction level to prevent a SELECT MAX(version) → INSERT race condition that
+  -- could produce two non-superseded active nodes.
+  PERFORM pg_advisory_xact_lock(hashtext(p_project_id::TEXT || ':' || p_step_type));
+
+  -- Idempotency guard: check again under the lock (double-checked locking) (AR-02)
   SELECT id INTO v_node_id
   FROM workflow_nodes
   WHERE idempotency_key = p_idempotency_key;
@@ -236,17 +241,28 @@ SET search_path = public
 AS $$
 DECLARE
   v_collaborator project_collaborators%ROWTYPE;
+  v_project_id   UUID;
 BEGIN
-  -- Find pending invitation by email matching the authenticated user
+  -- SEC-04: The invitation token IS the project_id UUID.
+  -- Cast explicitly so an invalid format returns a clear error rather than
+  -- silently falling through to a "not found" match against any pending invite.
+  BEGIN
+    v_project_id := p_invitation_token::UUID;
+  EXCEPTION WHEN invalid_text_representation THEN
+    RETURN json_build_object('error', 'Invalid invitation token format');
+  END;
+
+  -- Find pending invitation scoped to the specific project AND the authenticated
+  -- user's email. Prevents cross-project token reuse (SEC-04).
   SELECT * INTO v_collaborator
   FROM project_collaborators
-  WHERE email = (SELECT email FROM auth.users WHERE id = p_user_id)
-    AND status = 'pending'
-  ORDER BY invited_at DESC
+  WHERE project_id = v_project_id
+    AND email      = (SELECT email FROM auth.users WHERE id = p_user_id)
+    AND status     = 'pending'
   LIMIT 1;
 
   IF NOT FOUND THEN
-    RETURN json_build_object('error', 'No pending invitation found for this user');
+    RETURN json_build_object('error', 'No pending invitation found for this user and project');
   END IF;
 
   -- Accept the invitation
@@ -266,7 +282,9 @@ $$;
 
 COMMENT ON FUNCTION accept_project_invitation IS
   'Links the authenticated user to their pending invitation record.
-   Matches by email. Called from the invitation accept flow in the frontend. (FR-PROJ-03)';
+   p_invitation_token must be the project_id UUID — the lookup is scoped to that
+   specific project AND the authenticated user''s email, preventing cross-project
+   token reuse (SEC-04). Called from the invitation accept flow in the frontend. (FR-PROJ-03)';
 
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 -- FUNCTION: delete_project_cascade
