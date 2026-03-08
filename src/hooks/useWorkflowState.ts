@@ -155,8 +155,10 @@ export function useWorkflowState(projectId: string): UseWorkflowStateReturn {
 
       if (cancelled) return;
 
-      if (nodesResult.error) {
-        dispatch({ type: 'ERROR', message: nodesResult.error.message });
+      // Surface the first error encountered across all parallel fetches
+      const firstError = nodesResult.error ?? gatesResult.error ?? executionsResult.error ?? documentsResult.error;
+      if (firstError) {
+        dispatch({ type: 'ERROR', message: firstError.message });
         return;
       }
 

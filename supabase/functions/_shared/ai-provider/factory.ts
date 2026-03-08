@@ -14,9 +14,9 @@ import { GoogleGeminiProvider } from './google.ts';
 import { AnthropicProvider } from './anthropic.ts';
 
 export function createAIProvider(): AIProvider {
-  const apiKey = Deno.env.get('GOOGLE_AI_API_KEY');
+  const apiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
   if (!apiKey) {
-    throw new Error('GOOGLE_AI_API_KEY environment variable is not set');
+    throw new Error('GOOGLE_GEMINI_API_KEY environment variable is not set');
   }
   return new GoogleGeminiProvider(apiKey);
 }

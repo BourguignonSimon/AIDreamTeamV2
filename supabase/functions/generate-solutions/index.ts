@@ -120,6 +120,7 @@ Deno.serve(async (req: Request) => {
         sme_profile:          smeProfile,
       },
       p_output_data:     {
+        executive_summary:           parsedOutput.executive_summary ?? '',
         solutions:                   parsedOutput.solutions,
         total_estimated_roi_eur_per_year: parsedOutput.total_estimated_roi_eur_per_year ?? 0,
         implementation_roadmap:      parsedOutput.implementation_roadmap ?? [],

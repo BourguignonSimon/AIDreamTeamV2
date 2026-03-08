@@ -18,8 +18,9 @@ import { supabase } from '@/lib/supabase';
 
 const schema = z.object({
   name: z.string().min(2, 'Project name must be at least 2 characters').max(120),
-  client_name: z.string().max(120).optional(),
-  industry_sector: z.string().max(80).optional(),
+  client_name: z.string().min(1, 'Client name is required').max(120),
+  industry_sector: z.string().min(1, 'Industry is required').max(80),
+  country: z.string().length(2, 'Must be a 2-letter ISO country code (e.g. FR, BE, US)').toUpperCase(),
   language: z.enum(['fr', 'en', 'nl'] as const),
   domain_template_id: z.string().uuid().optional().nullish(),
 });
@@ -86,8 +87,9 @@ export default function ProjectCreateModal({ onClose, onCreated }: ProjectCreate
       .from('consulting_projects')
       .insert({
         name: values.name,
-        client_name: values.client_name || null,
-        industry: values.industry_sector || null,
+        client_name: values.client_name,
+        industry: values.industry_sector,
+        country: values.country.toUpperCase(),
         language: values.language as SupportedLanguage,
         domain_template_id: values.domain_template_id || null,
         owner_id: user.id,
@@ -100,11 +102,15 @@ export default function ProjectCreateModal({ onClose, onCreated }: ProjectCreate
       return;
     }
 
-    // Add owner as collaborator with editor role
+    // Add owner as collaborator so RLS member policies include them
     await supabase.from('project_collaborators').insert({
       project_id: data.id,
       user_id: user.id,
+      email: user.email!,
       role: 'editor',
+      status: 'accepted',
+      invited_by: user.id,
+      accepted_at: new Date().toISOString(),
     });
 
     onCreated(data.id);
@@ -146,23 +152,52 @@ export default function ProjectCreateModal({ onClose, onCreated }: ProjectCreate
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1.5">{t('project.client_name')}</label>
+            <label className="block text-sm font-medium mb-1.5">
+              {t('project.client_name')} <span className="text-destructive">*</span>
+            </label>
             <input
               {...register('client_name')}
               type="text"
               placeholder="e.g. Acme Corporation"
               className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
+            {errors.client_name && (
+              <p className="mt-1 text-xs text-destructive">{errors.client_name.message}</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1.5">{t('project.industry')}</label>
+            <label className="block text-sm font-medium mb-1.5">
+              {t('project.industry')} <span className="text-destructive">*</span>
+            </label>
             <input
               {...register('industry_sector')}
               type="text"
               placeholder="e.g. Manufacturing, Logistics, Finance"
               className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
+            {errors.industry_sector && (
+              <p className="mt-1 text-xs text-destructive">{errors.industry_sector.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">
+              {t('project.country')} <span className="text-destructive">*</span>
+            </label>
+            <input
+              {...register('country')}
+              type="text"
+              maxLength={2}
+              placeholder="e.g. FR, BE, US"
+              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary uppercase"
+            />
+            {errors.country && (
+              <p className="mt-1 text-xs text-destructive">{errors.country.message}</p>
+            )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              ISO 3166-1 alpha-2 country code (2 letters)
+            </p>
           </div>
 
           <div>

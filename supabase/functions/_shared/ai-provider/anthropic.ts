@@ -33,7 +33,7 @@ export class AnthropicProvider implements AIProvider {
         'x-api-key': this.apiKey,
         'anthropic-version': '2023-06-01',
         // Opt out of model training per SEC-GDPR-03
-        'anthropic-beta': 'output-128k-2025-02-19',
+        'anthropic-beta': 'no-training',
       },
       body: JSON.stringify(requestBody),
     });
